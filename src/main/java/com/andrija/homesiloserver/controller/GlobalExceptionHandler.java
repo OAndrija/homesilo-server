@@ -13,7 +13,6 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException ex) {
-
         String errorMessage = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(DefaultMessageSourceResolvable::getDefaultMessage)
@@ -21,5 +20,11 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(errorMessage);
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    public ResponseEntity<ErrorResponse> handleGenericException(Exception ex) {
+        String errorMessage = "An unknown error has occurred.";
+        ErrorResponse errorResponse = new ErrorResponse(errorMessage);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
     }
 }
