@@ -20,6 +20,7 @@ public class UserController {
         this.userService = userService;
     }
 
+    // Registers user
     @PostMapping
     public ResponseEntity<UserResponse> registerUser(
             @Valid @RequestBody UserRegisterRequest userRegisterRequest
@@ -28,6 +29,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    // Returns a list of all users
     @GetMapping
     public ResponseEntity<List<UserResponse>> listAllUsers() {
         List<UserResponse> users = userService.listAllUsers();
