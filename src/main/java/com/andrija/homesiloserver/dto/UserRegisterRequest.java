@@ -2,15 +2,15 @@ package com.andrija.homesiloserver.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import org.hibernate.validator.constraints.Length;
+import jakarta.validation.constraints.Size;
 
 public record UserRegisterRequest(
         @NotBlank(message = ERROR_MESSAGE_USERNAME_REQUIRED)
-        @Length(max = 255, message = ERROR_MESSAGE_USERNAME_LENGTH)
+        @Size(max = 255, message = ERROR_MESSAGE_USERNAME_LENGTH)
         String username,
 
         @NotBlank(message = ERROR_MESSAGE_PASSWORD_REQUIRED)
-        @Length(min = 6, max = 255, message = ERROR_MESSAGE_PASSWORD_LENGTH)
+        @Size(min = 6, max = 255, message = ERROR_MESSAGE_PASSWORD_LENGTH)
         String password,
 
         @NotBlank(message = ERROR_MESSAGE_EMAIL_REQUIRED)
