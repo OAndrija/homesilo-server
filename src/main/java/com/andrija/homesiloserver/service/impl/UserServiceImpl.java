@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.service.impl;
 
+import com.andrija.homesiloserver.dto.UserLoginRequest;
 import com.andrija.homesiloserver.dto.UserRegisterRequest;
 import com.andrija.homesiloserver.dto.UserResponse;
 import com.andrija.homesiloserver.exception.UserAlreadyExistsException;
@@ -8,6 +9,10 @@ import com.andrija.homesiloserver.model.User;
 import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.service.UserService;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,12 +22,13 @@ import java.util.UUID;
 
 
 @Service
-public class UserServiceImpl implements UserService {
+public class UserServiceImpl implements UserService, UserDetailsService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository,
+                           PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
@@ -43,6 +49,25 @@ public class UserServiceImpl implements UserService {
                 .email(request.email())
                 .build();
         return UserResponse.from(userRepository.save(user));
+    }
+
+    @Override
+    public UserResponse loginUser(UserLoginRequest request) {
+        User user = userRepository.findByUsername(request.username())
+                .orElseThrow(() -> new UserNotFoundException("Invalid username or password"));
+
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BadCredentialsException("Invalid username or password");
+        }
+
+        return UserResponse.from(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
     @Override

@@ -23,5 +23,4 @@ public record UserRegisterRequest(
     private static final String ERROR_MESSAGE_PASSWORD_REQUIRED = "Password is required";
     private static final String ERROR_MESSAGE_EMAIL_VALID = "Please provide valid email address";
     private static final String ERROR_MESSAGE_EMAIL_REQUIRED = "Email address is required";
-
 }
