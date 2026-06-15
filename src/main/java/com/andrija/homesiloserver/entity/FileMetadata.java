@@ -4,11 +4,12 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
 @Entity
-@Table(name = "file_metadata")
+@Table(name = "file_metadata", indexes = {
+        @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id")
+})
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -25,7 +26,7 @@ public class FileMetadata {
     @Column(nullable = false)
     private String originalFileName;
 
-    //The name that's saved in the File System
+    //The name that's saved in the File System, hash filename for deduplication functionality
     @Column(nullable = false, unique = true)
     private String storedFileName;
 
@@ -34,10 +35,6 @@ public class FileMetadata {
 
     @Column(nullable = false)
     private long size;
-
-    //hash of the file for deduplication functionality
-    @Column(nullable = false)
-    private String checksum;
 
     //flag for the thrash bin feature
     @Column(nullable = false)
