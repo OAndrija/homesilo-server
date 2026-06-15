@@ -3,6 +3,8 @@ package com.andrija.homesiloserver.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -24,7 +26,7 @@ public class FileMetadata {
     private String originalFileName;
 
     //The name that's saved in the File System
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String storedFileName;
 
     @Column(nullable = false)
@@ -32,4 +34,48 @@ public class FileMetadata {
 
     @Column(nullable = false)
     private long size;
+
+    //hash of the file for deduplication functionality
+    @Column(nullable = false)
+    private String checksum;
+
+    //flag for the thrash bin feature
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean trashed = false;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
+
+    @Column(nullable = false)
+    private LocalDateTime lastModified;
+
+    @Column(nullable = false)
+    private LocalDateTime uploadedAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FileMetadata that = (FileMetadata) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+
+    @PrePersist
+    protected void onCreate(){
+        LocalDateTime now = LocalDateTime.now();
+        this.uploadedAt = now;
+        this.lastModified = now;
+    }
+
+    @PreUpdate
+    protected void onUpdate(){
+        this.lastModified = LocalDateTime.now();
+    }
 }

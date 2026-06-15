@@ -51,7 +51,7 @@ public class User {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return getClass().hashCode();
     }
 
     @PrePersist
