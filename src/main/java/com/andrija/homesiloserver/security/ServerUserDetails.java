@@ -1,6 +1,6 @@
 package com.andrija.homesiloserver.security;
 
-import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.entity.User;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;

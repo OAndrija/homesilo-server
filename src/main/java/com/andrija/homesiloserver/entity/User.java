@@ -1,4 +1,4 @@
-package com.andrija.homesiloserver.model;
+package com.andrija.homesiloserver.entity;
 
 import com.andrija.homesiloserver.constant.UserRole;
 import jakarta.persistence.*;

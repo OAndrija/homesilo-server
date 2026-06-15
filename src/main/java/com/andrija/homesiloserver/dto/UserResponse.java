@@ -1,7 +1,7 @@
 package com.andrija.homesiloserver.dto;
 
 import com.andrija.homesiloserver.constant.UserRole;
-import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.entity.User;
 
 import java.time.LocalDateTime;
 import java.util.UUID;

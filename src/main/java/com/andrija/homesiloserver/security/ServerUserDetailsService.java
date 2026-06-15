@@ -1,6 +1,6 @@
 package com.andrija.homesiloserver.security;
 
-import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.entity.User;
 import com.andrija.homesiloserver.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;

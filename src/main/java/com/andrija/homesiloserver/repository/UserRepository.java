@@ -1,6 +1,6 @@
 package com.andrija.homesiloserver.repository;
 
-import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

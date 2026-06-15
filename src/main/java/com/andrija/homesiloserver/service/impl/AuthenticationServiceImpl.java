@@ -5,7 +5,7 @@ import com.andrija.homesiloserver.dto.AuthResponse;
 import com.andrija.homesiloserver.dto.UserLoginRequest;
 import com.andrija.homesiloserver.dto.UserRegisterRequest;
 import com.andrija.homesiloserver.exception.UserAlreadyExistsException;
-import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.entity.User;
 import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.service.AuthenticationService;
