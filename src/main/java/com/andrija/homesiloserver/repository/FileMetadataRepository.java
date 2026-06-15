@@ -12,4 +12,6 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
     Page<FileMetadata> findByOwnerIdAndTrashedFalse(UUID ownerId, Pageable pageable);
     Page<FileMetadata> findByOwnerIdAndTrashedTrue(UUID ownerId, Pageable pageable);
     Optional<FileMetadata> findByStoredFileNameAndOwnerId(String storedFileName, UUID userId);
+
+    long countByOwnerId(UUID ownerId);
 }
