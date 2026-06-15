@@ -5,11 +5,11 @@ import com.andrija.homesiloserver.dto.UserLoginRequest;
 import com.andrija.homesiloserver.dto.UserRegisterRequest;
 import com.andrija.homesiloserver.exception.UserAlreadyExistsException;
 import com.andrija.homesiloserver.model.User;
+import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.service.AuthenticationService;
-import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,13 +17,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +31,8 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${jwt.secret}")
     private String secretKey;
@@ -62,22 +64,20 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AuthResponse login(UserLoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
         );
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
         String token = generateToken(userDetails);
         return new AuthResponse(token, jwtExpiration);
     }
 
     @Override
     public String generateToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
-                .claims(claims)
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(getSigningKeys(), SignatureAlgorithm.HS256)
+                .signWith(getSigningKeys())
                 .compact();
     }
 
@@ -88,17 +88,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     }
 
     private String extractUsername(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(getSigningKeys())
+        return Jwts.parser()
+                .verifyWith(getSigningKeys())
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
-
-        return claims.getSubject();
+                .parseSignedClaims(token)
+                .getPayload()
+                .getSubject();
     }
 
-    private Key getSigningKeys() {
-        byte[] keyBytes = secretKey.getBytes();
+    private SecretKey getSigningKeys() {
+        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }

@@ -1,19 +1,10 @@
 package com.andrija.homesiloserver.service.impl;
 
-import com.andrija.homesiloserver.dto.UserLoginRequest;
-import com.andrija.homesiloserver.dto.UserRegisterRequest;
 import com.andrija.homesiloserver.dto.UserResponse;
-import com.andrija.homesiloserver.exception.UserAlreadyExistsException;
 import com.andrija.homesiloserver.exception.UserNotFoundException;
-import com.andrija.homesiloserver.model.User;
 import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.service.UserService;
 import org.springframework.data.domain.Sort;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
