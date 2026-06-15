@@ -3,13 +3,8 @@ package com.andrija.homesiloserver.model;
 import com.andrija.homesiloserver.constant.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
-import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -20,7 +15,7 @@ import java.util.UUID;
 @Builder
 @Getter
 @Setter
-public class User implements UserDetails {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -51,12 +46,12 @@ public class User implements UserDetails {
     public boolean equals(Object o) {
         if (o == null || getClass() != o.getClass()) return false;
         User user = (User) o;
-        return enabled == user.enabled && Objects.equals(id, user.id) && Objects.equals(username, user.username) && Objects.equals(password, user.password) && Objects.equals(email, user.email) && Objects.equals(createdAt, user.createdAt) && role == user.role;
+        return Objects.equals(id, user.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, username, password, email, createdAt, role, enabled);
+        return Objects.hash(id);
     }
 
     @PrePersist
@@ -67,21 +62,4 @@ public class User implements UserDetails {
             this.role = UserRole.USER;
         }
     }
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
-    }
-
-    @Override
-    public boolean isAccountNonExpired() { return true; }
-
-    @Override
-    public boolean isAccountNonLocked() { return true; }
-
-    @Override
-    public boolean isCredentialsNonExpired() { return true; }
-
-    @Override
-    public boolean isEnabled() { return enabled; }
 }

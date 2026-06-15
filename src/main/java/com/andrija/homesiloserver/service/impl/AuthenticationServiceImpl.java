@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -84,7 +85,21 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public UserDetails validateToken(String token) {
         String username = extractUsername(token);
-        return userDetailsService.loadUserByUsername(username);
+        String role = extractRole(token);
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(username)
+                .password("")
+                .authorities(new SimpleGrantedAuthority(role))
+                .build();
+    }
+
+    private String extractRole(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKeys())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
     }
 
     private String extractUsername(String token) {
