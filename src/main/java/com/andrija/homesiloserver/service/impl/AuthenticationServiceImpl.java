@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.service.impl;
 
+import com.andrija.homesiloserver.constant.UserRole;
 import com.andrija.homesiloserver.dto.AuthResponse;
 import com.andrija.homesiloserver.dto.UserLoginRequest;
 import com.andrija.homesiloserver.dto.UserRegisterRequest;
@@ -12,9 +13,11 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -28,6 +31,7 @@ import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationServiceImpl implements AuthenticationService {
 
     private final AuthenticationManager authenticationManager;
@@ -55,6 +59,7 @@ public class AuthenticationServiceImpl implements AuthenticationService {
                 .username(request.username())
                 .password(passwordEncoder.encode(request.password()))
                 .email(request.email())
+                .role(UserRole.USER)
                 .build();
 
         User saved = userRepository.save(user);
@@ -74,9 +79,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public String generateToken(UserDetails userDetails) {
+        String role = userDetails.getAuthorities()
+                .stream()
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                .orElse(null);
+        log.debug("Generating token for user: {}, role: {}", userDetails.getUsername(), role);
         return Jwts.builder()
                 .subject(userDetails.getUsername())
-                .issuedAt(new Date(System.currentTimeMillis()))
+                .claim("role", role)
+                .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSigningKeys())
                 .compact();
@@ -84,31 +96,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public UserDetails validateToken(String token) {
-        String username = extractUsername(token);
-        String role = extractRole(token);
+        var claims = Jwts.parser()
+                .verifyWith(getSigningKeys())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+
+        String username = claims.getSubject();
+        String role = claims.get("role", String.class);
+
+        log.debug("Validating token for user: {}, role: {}", username, role);
+
         return org.springframework.security.core.userdetails.User.builder()
                 .username(username)
                 .password("")
-                .authorities(new SimpleGrantedAuthority(role))
+                .authorities(new SimpleGrantedAuthority(role != null ? role : "ROLE_USER"))
                 .build();
-    }
-
-    private String extractRole(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKeys())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .get("role", String.class);
-    }
-
-    private String extractUsername(String token) {
-        return Jwts.parser()
-                .verifyWith(getSigningKeys())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload()
-                .getSubject();
     }
 
     private SecretKey getSigningKeys() {
