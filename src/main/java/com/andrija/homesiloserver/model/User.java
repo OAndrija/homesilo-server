@@ -2,10 +2,7 @@ package com.andrija.homesiloserver.model;
 
 import com.andrija.homesiloserver.constant.UserRole;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,40 +10,54 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
 @Table(name = "users")
-@Data
-@Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
+@Getter
+@Setter
 public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "id", updatable = false, nullable = false)
+    @Column(updatable = false, nullable = false)
     private UUID id;
 
-    @Column(name = "username", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String username;
 
-    @Column(name = "password", nullable = false)
+    @Column(nullable = false)
     private String password;
 
-    @Column(name = "email", nullable = false, unique = true)
+    @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false)
+    @Column(nullable = false)
     private UserRole role;
 
-    @Column(name = "enabled", nullable = false)
+    @Column(nullable = false)
     @Builder.Default
     private boolean enabled = true;
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return enabled == user.enabled && Objects.equals(id, user.id) && Objects.equals(username, user.username) && Objects.equals(password, user.password) && Objects.equals(email, user.email) && Objects.equals(createdAt, user.createdAt) && role == user.role;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, username, password, email, createdAt, role, enabled);
+    }
 
     @PrePersist
     protected void onCreate() {

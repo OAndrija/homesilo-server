@@ -32,15 +32,13 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.OK).body(user);
     }
 
-    @GetMapping("/search/username")
-    public ResponseEntity<UserResponse> getUserByUsername(@RequestParam("value")  String username) {
-        UserResponse user = userService.findUserByUsername(username);
-        return ResponseEntity.status(HttpStatus.OK).body(user);
-    }
-
-    @GetMapping("/search/email")
-    public ResponseEntity<UserResponse> getUserByEmail(@RequestParam("value")  String email) {
-        UserResponse user = userService.findUserByEmail(email);
-        return ResponseEntity.status(HttpStatus.OK).body(user);
+    @GetMapping("/search")
+    public ResponseEntity<UserResponse> searchUser(
+            @RequestParam(required = false) String username,
+            @RequestParam(required = false) String email
+    ) {
+        if (username != null) return ResponseEntity.ok(userService.findUserByUsername(username));
+        if (email != null) return ResponseEntity.ok(userService.findUserByEmail(email));
+        return ResponseEntity.badRequest().build();
     }
 }

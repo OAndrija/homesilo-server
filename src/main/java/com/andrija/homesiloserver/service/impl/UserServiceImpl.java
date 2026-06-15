@@ -22,52 +22,12 @@ import java.util.UUID;
 
 
 @Service
-public class UserServiceImpl implements UserService, UserDetailsService {
+public class UserServiceImpl implements UserService{
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository,
-                           PasswordEncoder passwordEncoder) {
+    public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @Override
-    @Transactional
-    public UserResponse registerUser(UserRegisterRequest request) {
-        if (userRepository.findByUsername(request.username()).isPresent()) {
-            throw new UserAlreadyExistsException("Username already taken");
-        }
-        if (userRepository.findByEmail(request.email()).isPresent()) {
-            throw new UserAlreadyExistsException("Email already registered");
-        }
-
-        User user = User.builder()
-                .username(request.username())
-                .password(passwordEncoder.encode(request.password()))
-                .email(request.email())
-                .build();
-        return UserResponse.from(userRepository.save(user));
-    }
-
-    @Override
-    public UserResponse loginUser(UserLoginRequest request) {
-        User user = userRepository.findByUsername(request.username())
-                .orElseThrow(() -> new UserNotFoundException("Invalid username or password"));
-
-        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BadCredentialsException("Invalid username or password");
-        }
-
-        return UserResponse.from(user);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
     }
 
     @Override
