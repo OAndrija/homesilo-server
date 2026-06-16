@@ -7,9 +7,18 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "file_metadata", indexes = {
-        @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id")
-})
+@Table(
+        name = "file_metadata",
+        indexes = {
+                @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id")
+        },
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uq_file_metadata_owner_stored_filename",
+                        columnNames = {"owner_id", "stored_file_name"}
+                )
+        }
+)
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -22,12 +31,10 @@ public class FileMetadata {
     @Column(updatable = false, nullable = false)
     private UUID id;
 
-    //Original name of the user's file
     @Column(nullable = false)
     private String originalFileName;
 
-    //The name that's saved in the File System, hash filename for deduplication functionality
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String storedFileName;
 
     @Column(nullable = false)
@@ -36,7 +43,6 @@ public class FileMetadata {
     @Column(nullable = false)
     private long size;
 
-    //flag for the thrash bin feature
     @Column(nullable = false)
     @Builder.Default
     private boolean trashed = false;
@@ -65,14 +71,14 @@ public class FileMetadata {
     }
 
     @PrePersist
-    protected void onCreate(){
+    protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();
         this.uploadedAt = now;
         this.lastModified = now;
     }
 
     @PreUpdate
-    protected void onUpdate(){
+    protected void onUpdate() {
         this.lastModified = LocalDateTime.now();
     }
 }

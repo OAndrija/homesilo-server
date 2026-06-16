@@ -1,15 +1,6 @@
 package com.andrija.homesiloserver.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-@Builder
-public class AuthResponse {
-    private String token;
-    private long expiresIn;
-}
+public record AuthResponse(
+        String token,
+        long expiresIn
+) {}
