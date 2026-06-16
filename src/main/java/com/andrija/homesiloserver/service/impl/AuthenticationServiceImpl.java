@@ -71,9 +71,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     public AuthResponse login(UserLoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
+                new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.username());
         String token = generateToken(userDetails);
         return new AuthResponse(token, jwtExpiration);
     }
