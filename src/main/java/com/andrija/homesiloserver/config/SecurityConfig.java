@@ -4,6 +4,7 @@ import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.security.JwtAuthenticationFilter;
 import com.andrija.homesiloserver.security.ServerUserDetailsService;
 import com.andrija.homesiloserver.service.AuthenticationService;
+import org.apache.tika.Tika;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

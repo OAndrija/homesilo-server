@@ -13,6 +13,7 @@ import com.andrija.homesiloserver.service.FileService;
 import com.andrija.homesiloserver.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.Tika;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Pageable;
@@ -38,16 +39,19 @@ public class FileServiceImpl implements FileService {
     private final FileMetadataRepository fileMetadataRepository;
     private final FileStorageService fileStorageService;
     private final UserRepository userRepository;
+    private final Tika tika;
 
     @Override
     public FileMetadataResponse upload(MultipartFile file, UUID requesterId) {
-        User owner =  userRepository.findById(requesterId)
-                .orElseThrow(() -> new UserNotFoundException("User not found " + requesterId));
+        User owner = userRepository.findById(requesterId)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + requesterId));
+
+        String detectedContentType = detectMimeType(file);
 
         String storedFileName = computeSha256(file);
 
         var existing = fileMetadataRepository.findByStoredFileNameAndOwnerId(storedFileName, requesterId);
-        if(existing.isPresent()) {
+        if (existing.isPresent()) {
             log.info("Duplicate upload for user '{}' — returning existing metadata '{}'",
                     requesterId, existing.get().getId());
             return FileMetadataResponse.from(existing.get());
@@ -58,7 +62,7 @@ public class FileServiceImpl implements FileService {
         FileMetadata metadata = FileMetadata.builder()
                 .originalFileName(sanitizeFileName(file.getOriginalFilename()))
                 .storedFileName(storedFileName)
-                .contentType(file.getContentType())
+                .contentType(detectedContentType)
                 .size(file.getSize())
                 .owner(owner)
                 .build();
@@ -69,7 +73,6 @@ public class FileServiceImpl implements FileService {
                     saved.getId(), saved.getOriginalFileName(), requesterId);
             return FileMetadataResponse.from(saved);
         } catch (DataIntegrityViolationException e) {
-            // Race condition: concurrent identical upload won — return that record
             return fileMetadataRepository
                     .findByStoredFileNameAndOwnerId(storedFileName, requesterId)
                     .map(FileMetadataResponse::from)
@@ -169,5 +172,18 @@ public class FileServiceImpl implements FileService {
     private String sanitizeFileName(String fileName) {
         if (fileName == null || fileName.isBlank()) return "unnamed";
         return Paths.get(fileName).getFileName().toString();
+    }
+
+    private String detectMimeType(MultipartFile file) {
+        try (InputStream is = file.getInputStream()) {
+            String detected = tika.detect(is, file.getOriginalFilename());
+            if ("application/octet-stream".equals(detected)) {
+                log.debug("Could not detect specific MIME type for '{}', using octet-stream",
+                        file.getOriginalFilename());
+            }
+            return detected;
+        } catch (IOException e) {
+            throw new FileStorageException("Failed to detect file type", e);
+        }
     }
 }

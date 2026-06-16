@@ -8,14 +8,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -65,9 +63,13 @@ public class FileController {
         Resource fileResource = fileService.download(fileId, userDetails.getId());
         FileMetadataResponse metadata = fileService.getFileMetadata(fileId, userDetails.getId());
 
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(metadata.originalFileName(), StandardCharsets.UTF_8)
+                .build();
+
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(metadata.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + metadata.originalFileName() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(fileResource);
     }
 
