@@ -57,7 +57,7 @@ public class FileController {
         return ResponseEntity.ok(fileService.getFileMetadata(fileId, userDetails.getId()));
     }
 
-    @GetMapping("/download/{fileId}")
+    @GetMapping("/{fileId}/download")
     public ResponseEntity<Resource> downloadFile(
             @PathVariable UUID fileId,
             @AuthenticationPrincipal ServerUserDetails userDetails
@@ -71,7 +71,7 @@ public class FileController {
                 .body(fileResource);
     }
 
-    @PostMapping("/{fileId}/trash")
+    @PatchMapping("/{fileId}/trash")
     public ResponseEntity<FileMetadataResponse> moveToTrash(
             @PathVariable UUID fileId,
             @AuthenticationPrincipal ServerUserDetails userDetails
@@ -79,7 +79,7 @@ public class FileController {
         return ResponseEntity.ok(fileService.trashFile(fileId, userDetails.getId()));
     }
 
-    @PostMapping("/{fileId}/restore")
+    @PatchMapping("/{fileId}/restore")
     public ResponseEntity<FileMetadataResponse> restoreFile(
             @PathVariable UUID fileId,
             @AuthenticationPrincipal ServerUserDetails userDetails
@@ -88,11 +88,11 @@ public class FileController {
     }
 
     @DeleteMapping("/{fileId}")
-    public ResponseEntity<FileMetadataResponse> deleteFile(
+    public ResponseEntity<Void> deleteFile(
             @PathVariable UUID fileId,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         fileService.deletePermanently(fileId, userDetails.getId());
-        return ResponseEntity.ok().build();
+        return ResponseEntity.noContent().build();
     }
 }

@@ -4,6 +4,7 @@ import com.andrija.homesiloserver.dto.UserResponse;
 import com.andrija.homesiloserver.exception.UserNotFoundException;
 import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,16 +14,13 @@ import java.util.UUID;
 
 
 @Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserServiceImpl implements UserService{
 
     private final UserRepository userRepository;
 
-    public UserServiceImpl(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
     @Override
-    @Transactional(readOnly = true)
     public List<UserResponse> listAllUsers() {
         return userRepository.findAll(Sort.by(Sort.Direction.ASC, "username"))
                 .stream()
@@ -31,7 +29,6 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    @Transactional(readOnly = true)
     public UserResponse findUserByEmail(String email) {
         return userRepository.findByEmail(email)
                 .map(UserResponse::from)
@@ -39,7 +36,6 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    @Transactional(readOnly = true)
     public UserResponse findUserById(UUID id) {
         return userRepository.findById(id)
                 .map(UserResponse::from)
@@ -47,7 +43,6 @@ public class UserServiceImpl implements UserService{
     }
 
     @Override
-    @Transactional(readOnly = true)
     public UserResponse findUserByUsername(String username) {
         return userRepository.findByUsername(username)
                 .map(UserResponse::from)
