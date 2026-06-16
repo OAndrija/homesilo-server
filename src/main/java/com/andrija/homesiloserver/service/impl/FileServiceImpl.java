@@ -88,6 +88,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<FileMetadataResponse> listFiles(UUID requesterId, Pageable pageable) {
         return PageResponse.from(
                 fileMetadataRepository
@@ -97,6 +98,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PageResponse<FileMetadataResponse> listTrashedFiles(UUID requesterId, Pageable pageable) {
         return PageResponse.from(
                 fileMetadataRepository

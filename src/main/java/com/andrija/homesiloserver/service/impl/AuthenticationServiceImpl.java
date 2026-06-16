@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.UUID;
 
 
 @Service
@@ -79,19 +80,22 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
     @Override
     public String generateToken(UserDetails userDetails) {
-        String role = userDetails.getAuthorities()
-                .stream()
+        String role = userDetails.getAuthorities().stream()
                 .findFirst()
                 .map(GrantedAuthority::getAuthority)
                 .orElse(null);
-        log.debug("Generating token for user: {}, role: {}", userDetails.getUsername(), role);
-        return Jwts.builder()
+
+        var builder = Jwts.builder()
                 .subject(userDetails.getUsername())
                 .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(getSigningKeys())
-                .compact();
+                .expiration(new Date(System.currentTimeMillis() + jwtExpiration));
+
+        if (userDetails instanceof ServerUserDetails serverDetails) {
+            builder.claim("id", serverDetails.getId().toString());
+        }
+
+        return builder.signWith(getSigningKeys()).compact();
     }
 
     @Override
@@ -104,14 +108,16 @@ public class AuthenticationServiceImpl implements AuthenticationService {
 
         String username = claims.getSubject();
         String role = claims.get("role", String.class);
+        String id = claims.get("id", String.class);
 
-        log.debug("Validating token for user: {}, role: {}", username, role);
-
-        return org.springframework.security.core.userdetails.User.builder()
+        User user = User.builder()
+                .id(id != null ? UUID.fromString(id) : null)
                 .username(username)
-                .password("")
-                .authorities(new SimpleGrantedAuthority(role != null ? role : "ROLE_USER"))
+                .role(role != null ? com.andrija.homesiloserver.constant.UserRole.valueOf(role.replace("ROLE_", "")) : com.andrija.homesiloserver.constant.UserRole.USER)
+                .enabled(true)
                 .build();
+
+        return new ServerUserDetails(user);
     }
 
     private SecretKey getSigningKeys() {
