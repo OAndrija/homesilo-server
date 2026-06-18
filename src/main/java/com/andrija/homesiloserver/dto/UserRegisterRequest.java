@@ -9,13 +9,13 @@ public record UserRegisterRequest(
         @Size(max = 255, message = ERROR_MESSAGE_USERNAME_LENGTH)
         String username,
 
-        @NotBlank(message = ERROR_MESSAGE_PASSWORD_REQUIRED)
-        @Size(min = 6, max = 255, message = ERROR_MESSAGE_PASSWORD_LENGTH)
-        String password,
-
         @NotBlank(message = ERROR_MESSAGE_EMAIL_REQUIRED)
         @Email(message = ERROR_MESSAGE_EMAIL_VALID)
-        String email
+        String email,
+
+        @NotBlank(message = ERROR_MESSAGE_PASSWORD_REQUIRED)
+        @Size(min = 6, max = 255, message = ERROR_MESSAGE_PASSWORD_LENGTH)
+        String password
 ) {
     private static final String ERROR_MESSAGE_USERNAME_REQUIRED = "Username is required";
     private static final String ERROR_MESSAGE_USERNAME_LENGTH = "Username must be between 1 and 255 characters";

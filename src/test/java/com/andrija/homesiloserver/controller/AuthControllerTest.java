@@ -35,7 +35,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("POST /api/v1/auth/register - Success Flow")
     void register_ShouldReturnCreated_WhenPayloadIsValid() throws Exception {
-        UserRegisterRequest request = new UserRegisterRequest("tester", "securePassword123", "andrija@example.com");
+        UserRegisterRequest request = new UserRegisterRequest("tester", "andrija@example.com", "securePassword123");
         AuthResponse mockResponse = new AuthResponse("mocked-jwt-token-string", 3600L);
 
         when(authenticationService.register(any(UserRegisterRequest.class))).thenReturn(mockResponse);

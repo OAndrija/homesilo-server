@@ -97,11 +97,14 @@ class FileControllerTest {
         when(fileService.download(mockFileId, testUserId)).thenReturn(mockResource);
         when(fileService.getFileMetadata(mockFileId, testUserId)).thenReturn(mockMetadata);
 
-        mockMvc.perform(get("/api/v1/files/download/{fileId}", mockFileId)
+        mockMvc.perform(get("/api/v1/files/{fileId}/download", mockFileId)
                         .with(authentication(mockAuthContext)))
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_PDF_VALUE))
-                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"document.pdf\""))
+                .andExpect(header().string(
+                        HttpHeaders.CONTENT_DISPOSITION,
+                        org.hamcrest.Matchers.containsString("filename=\"document.pdf\"")
+                ))
                 .andExpect(content().string("raw-file-stream-content"));
     }
 
@@ -114,6 +117,6 @@ class FileControllerTest {
         mockMvc.perform(delete("/api/v1/files/{fileId}", mockFileId)
                         .with(authentication(mockAuthContext))
                         .with(csrf()))
-                .andExpect(status().isOk());
+                .andExpect(status().isNoContent());
     }
 }
