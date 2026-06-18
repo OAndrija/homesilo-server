@@ -33,7 +33,6 @@ import java.util.UUID;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-@Transactional
 public class FileServiceImpl implements FileService {
 
     private final FileMetadataRepository fileMetadataRepository;
@@ -42,6 +41,7 @@ public class FileServiceImpl implements FileService {
     private final Tika tika;
 
     @Override
+    @Transactional
     public FileMetadataResponse upload(MultipartFile file, UUID requesterId) {
         User owner = userRepository.findById(requesterId)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + requesterId));
@@ -111,11 +111,13 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public FileMetadataResponse getFileMetadata(UUID fileId, UUID requesterId) {
         return FileMetadataResponse.from(getMetadataAndVerifyOwner(fileId, requesterId));
     }
 
     @Override
+    @Transactional
     public FileMetadataResponse trashFile(UUID fileId, UUID requesterId) {
         FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
         if(metadata.isTrashed()) {
@@ -126,6 +128,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional
     public FileMetadataResponse restore(UUID fileId, UUID requesterId) {
         FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
         if(!metadata.isTrashed()) {
@@ -136,6 +139,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    @Transactional
     public void deletePermanently(UUID fileId, UUID requesterId) {
         FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
         if(!metadata.isTrashed()) {
