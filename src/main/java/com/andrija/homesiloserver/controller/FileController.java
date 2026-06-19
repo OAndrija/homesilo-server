@@ -7,6 +7,7 @@ import com.andrija.homesiloserver.service.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,7 +34,7 @@ public class FileController {
 
     @GetMapping
     public ResponseEntity<PageResponse<FileMetadataResponse>> listActiveFiles(
-            @PageableDefault(size = 20) Pageable pageable,
+            @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.ok(fileService.listFiles(userDetails.getId(), pageable));
@@ -41,7 +42,7 @@ public class FileController {
 
     @GetMapping("/trash")
     public ResponseEntity<PageResponse<FileMetadataResponse>> listTrashedFiles(
-            @PageableDefault(size = 20) Pageable pageable,
+            @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.ok(fileService.listTrashedFiles(userDetails.getId(), pageable));
