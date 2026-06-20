@@ -120,6 +120,15 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public PageResponse<FileMetadataResponse> searchTrashedFiles(UUID requesterId, String query, Pageable pageable) {
+        return PageResponse.from(
+                fileMetadataRepository
+                        .findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(requesterId, query, pageable)
+                        .map(FileMetadataResponse::from)
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public FileMetadataResponse getFileMetadata(UUID fileId, UUID requesterId) {
         return FileMetadataResponse.from(getMetadataAndVerifyOwner(fileId, requesterId));

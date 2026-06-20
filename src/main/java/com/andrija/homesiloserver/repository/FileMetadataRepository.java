@@ -14,6 +14,7 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
     Page<FileMetadata> findByOwnerIdAndTrashedFalse(UUID ownerId, Pageable pageable);
     Page<FileMetadata> findByOwnerIdAndTrashedTrue(UUID ownerId, Pageable pageable);
     Page<FileMetadata> findByOwnerIdAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(UUID ownerId, String query, Pageable pageable);
+    Page<FileMetadata> findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(UUID ownerId, String query, Pageable pageable);
     Optional<FileMetadata> findByStoredFileNameAndOwnerId(String storedFileName, UUID userId);
 
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner.id = :ownerId AND f.trashed = false")
