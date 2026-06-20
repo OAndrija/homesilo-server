@@ -13,6 +13,7 @@ public interface FileService {
     Resource download(UUID fileId, UUID requesterId);
     PageResponse<FileMetadataResponse> listFiles(UUID requesterId, Pageable pageable);
     PageResponse<FileMetadataResponse> listTrashedFiles(UUID requesterId, Pageable pageable);
+    PageResponse<FileMetadataResponse> searchFiles(UUID requesterId, String query, Pageable pageable);
     FileMetadataResponse getFileMetadata(UUID fileId, UUID requesterId);
     FileMetadataResponse trashFile(UUID fileId, UUID requesterId);
     FileMetadataResponse restore(UUID fileId, UUID requesterId);

@@ -111,6 +111,15 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public PageResponse<FileMetadataResponse> searchFiles(UUID requesterId, String query, Pageable pageable) {
+        return PageResponse.from(
+                fileMetadataRepository
+                        .findByOwnerIdAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(requesterId, query, pageable)
+                        .map(FileMetadataResponse::from)
+        );
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public FileMetadataResponse getFileMetadata(UUID fileId, UUID requesterId) {
         return FileMetadataResponse.from(getMetadataAndVerifyOwner(fileId, requesterId));

@@ -105,4 +105,13 @@ public class FileController {
     ) {
         return ResponseEntity.ok(fileService.getStorageUsed(userDetails.getId()));
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<PageResponse<FileMetadataResponse>> searchFiles(
+            @RequestParam String query,
+            @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return  ResponseEntity.ok(fileService.searchFiles(userDetails.getId(), query, pageable));
+    }
 }
