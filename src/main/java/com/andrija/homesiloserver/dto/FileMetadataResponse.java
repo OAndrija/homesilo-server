@@ -12,7 +12,8 @@ public record FileMetadataResponse(
         long size,
         boolean trashed,
         LocalDateTime uploadedAt,
-        LocalDateTime lastModified
+        LocalDateTime lastModified,
+        LocalDateTime trashedAt
 ) {
     public static FileMetadataResponse from(FileMetadata fileMetadata) {
         return new FileMetadataResponse(
@@ -22,7 +23,8 @@ public record FileMetadataResponse(
                 fileMetadata.getSize(),
                 fileMetadata.isTrashed(),
                 fileMetadata.getUploadedAt(),
-                fileMetadata.getLastModified()
+                fileMetadata.getLastModified(),
+                fileMetadata.getTrashedAt()
         );
     }
 }

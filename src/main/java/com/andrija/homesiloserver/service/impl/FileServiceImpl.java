@@ -1,7 +1,9 @@
 package com.andrija.homesiloserver.service.impl;
 
+import com.andrija.homesiloserver.dto.DashboardStatsResponse;
 import com.andrija.homesiloserver.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.dto.PageResponse;
+import com.andrija.homesiloserver.dto.StorageBreakdownItem;
 import com.andrija.homesiloserver.entity.FileMetadata;
 import com.andrija.homesiloserver.entity.User;
 import com.andrija.homesiloserver.exception.FileNotFoundException;
@@ -16,7 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,8 +31,8 @@ import java.nio.file.Paths;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
-import java.util.UUID;
+import java.time.LocalDateTime;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -47,7 +51,6 @@ public class FileServiceImpl implements FileService {
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + requesterId));
 
         String detectedContentType = detectMimeType(file);
-
         String storedFileName = computeSha256(file);
 
         var existing = fileMetadataRepository.findByStoredFileNameAndOwnerId(storedFileName, requesterId);
@@ -142,6 +145,7 @@ public class FileServiceImpl implements FileService {
             throw new IllegalStateException("File is already in trash");
         }
         metadata.setTrashed(true);
+        metadata.setTrashedAt(LocalDateTime.now());
         return FileMetadataResponse.from(metadata);
     }
 
@@ -153,6 +157,7 @@ public class FileServiceImpl implements FileService {
             throw new IllegalStateException("File is not in trash");
         }
         metadata.setTrashed(false);
+        metadata.setTrashedAt(null);
         return FileMetadataResponse.from(metadata);
     }
 
@@ -172,6 +177,82 @@ public class FileServiceImpl implements FileService {
     @Transactional(readOnly = true)
     public long getStorageUsed(UUID requesterId) {
         return fileMetadataRepository.sumSizeByOwnerIdAndTrashedFalse(requesterId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DashboardStatsResponse getDashboardStats(UUID requesterId) {
+        User user = userRepository.findById(requesterId)
+                .orElseThrow(() -> new UserNotFoundException("User not found: " + requesterId));
+
+        long storageUsed = fileMetadataRepository.sumSizeByOwnerIdAndTrashedFalse(requesterId);
+        long totalFiles  = fileMetadataRepository.countByOwnerIdAndTrashedFalse(requesterId);
+
+        LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
+        long filesThisWeek = fileMetadataRepository
+                .countByOwnerIdAndTrashedFalseAndUploadedAtAfter(requesterId, weekAgo);
+
+        List<StorageBreakdownItem> breakdown = buildBreakdown(
+                fileMetadataRepository.sumSizeByContentTypeForOwner(requesterId)
+        );
+
+        Pageable top5ByTrashedAt = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "trashedAt"));
+        List<FileMetadataResponse> recentlyTrashed = fileMetadataRepository
+                .findByOwnerIdAndTrashedTrue(requesterId, top5ByTrashedAt)
+                .map(FileMetadataResponse::from)
+                .getContent();
+
+        return new DashboardStatsResponse(
+                storageUsed,
+                user.getStorageQuotaBytes(),
+                totalFiles,
+                filesThisWeek,
+                breakdown,
+                recentlyTrashed
+        );
+    }
+
+    // HELPER METHODS
+
+    private List<StorageBreakdownItem> buildBreakdown(List<Object[]> rows) {
+        Map<String, Long> totals = new LinkedHashMap<>();
+        totals.put("Documents", 0L);
+        totals.put("Images",    0L);
+        totals.put("Videos",    0L);
+        totals.put("Archives",  0L);
+        totals.put("Other",     0L);
+
+        for (Object[] row : rows) {
+            String contentType = (String) row[0];
+            long   bytes       = (Long)   row[1];
+            totals.merge(categorize(contentType), bytes, Long::sum);
+        }
+
+        return totals.entrySet().stream()
+                .filter(e -> e.getValue() > 0)
+                .map(e -> new StorageBreakdownItem(e.getKey(), e.getValue()))
+                .toList();
+    }
+
+    private String categorize(String contentType) {
+        if (contentType == null) return "Other";
+        if (contentType.startsWith("image/"))  return "Images";
+        if (contentType.startsWith("video/"))  return "Videos";
+        if (contentType.startsWith("audio/"))  return "Videos"; // bucket into Videos or keep separate
+        if (contentType.startsWith("text/"))   return "Documents";
+        if (contentType.contains("pdf")
+                || contentType.contains("word")
+                || contentType.contains("document")
+                || contentType.contains("spreadsheet")
+                || contentType.contains("presentation")
+                || contentType.contains("excel"))       return "Documents";
+        if (contentType.contains("zip")
+                || contentType.contains("tar")
+                || contentType.contains("gzip")
+                || contentType.contains("7z")
+                || contentType.contains("rar")
+                || contentType.contains("compressed"))  return "Archives";
+        return "Other";
     }
 
 

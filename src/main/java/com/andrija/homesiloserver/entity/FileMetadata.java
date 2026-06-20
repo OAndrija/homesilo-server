@@ -10,7 +10,8 @@ import java.util.UUID;
 @Table(
         name = "file_metadata",
         indexes = {
-                @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id")
+                @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id"),
+                @Index(name = "idx_file_metadata_trashed_at", columnList = "trashed_at")
         },
         uniqueConstraints = {
                 @UniqueConstraint(
@@ -46,6 +47,9 @@ public class FileMetadata {
     @Column(nullable = false)
     @Builder.Default
     private boolean trashed = false;
+
+    @Column
+    private LocalDateTime trashedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)

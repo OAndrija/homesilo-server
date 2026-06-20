@@ -11,7 +11,8 @@ public record UserResponse(
         String username,
         String email,
         UserRole role,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        long storageQuotaBytes
 ) {
     public static UserResponse from(User user) {
         return new UserResponse(
@@ -19,7 +20,8 @@ public record UserResponse(
                 user.getUsername(),
                 user.getEmail(),
                 user.getRole(),
-                user.getCreatedAt()
+                user.getCreatedAt(),
+                user.getStorageQuotaBytes()
         );
     }
 }

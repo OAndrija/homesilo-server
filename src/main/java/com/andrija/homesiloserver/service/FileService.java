@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.service;
 
+import com.andrija.homesiloserver.dto.DashboardStatsResponse;
 import com.andrija.homesiloserver.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.dto.PageResponse;
 import org.springframework.core.io.Resource;
@@ -18,6 +19,7 @@ public interface FileService {
     FileMetadataResponse getFileMetadata(UUID fileId, UUID requesterId);
     FileMetadataResponse trashFile(UUID fileId, UUID requesterId);
     FileMetadataResponse restore(UUID fileId, UUID requesterId);
+    DashboardStatsResponse getDashboardStats(UUID requesterId);
     void deletePermanently(UUID fileId, UUID requesterId);
     long getStorageUsed(UUID requesterId);
 }

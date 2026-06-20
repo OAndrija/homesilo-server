@@ -3,7 +3,6 @@ package com.andrija.homesiloserver.entity;
 import com.andrija.homesiloserver.constant.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,6 +15,8 @@ import java.util.UUID;
 @Getter
 @Setter
 public class User {
+
+    private static final long DEFAULT_QUOTA_BYTES = 107_374_182_400L; // 100 GB
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -42,6 +43,10 @@ public class User {
     @Builder.Default
     private boolean enabled = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private long storageQuotaBytes = DEFAULT_QUOTA_BYTES;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -58,7 +63,6 @@ public class User {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-
         if (this.role == null) {
             this.role = UserRole.USER;
         }
