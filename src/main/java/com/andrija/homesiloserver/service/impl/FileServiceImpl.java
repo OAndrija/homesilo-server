@@ -150,6 +150,13 @@ public class FileServiceImpl implements FileService {
         log.info("Permanently deleted file '{}' for user '{}'", fileId, requesterId);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public long getStorageUsed(UUID requesterId) {
+        return fileMetadataRepository.sumSizeByOwnerIdAndTrashedFalse(requesterId);
+    }
+
+
     private FileMetadata getMetadataAndVerifyOwner(UUID fileId, UUID requesterId) {
         FileMetadata metadata = fileMetadataRepository.findById(fileId)
                 .orElseThrow(() -> new FileNotFoundException("File not found: " + fileId));

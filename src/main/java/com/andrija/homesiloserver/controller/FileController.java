@@ -98,4 +98,11 @@ public class FileController {
         fileService.deletePermanently(fileId, userDetails.getId());
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/storage-usage")
+    public ResponseEntity<Long> getStorageUsage(
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(fileService.getStorageUsed(userDetails.getId()));
+    }
 }

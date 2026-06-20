@@ -17,4 +17,5 @@ public interface FileService {
     FileMetadataResponse trashFile(UUID fileId, UUID requesterId);
     FileMetadataResponse restore(UUID fileId, UUID requesterId);
     void deletePermanently(UUID fileId, UUID requesterId);
+    long getStorageUsed(UUID requesterId);
 }
