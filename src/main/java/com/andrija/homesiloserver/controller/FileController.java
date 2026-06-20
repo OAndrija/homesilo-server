@@ -74,6 +74,24 @@ public class FileController {
                 .body(fileResource);
     }
 
+    @GetMapping("/{fileId}/preview")
+    public ResponseEntity<Resource> previewFile(
+            @PathVariable UUID fileId,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        Resource fileResource = fileService.download(fileId, userDetails.getId());
+        FileMetadataResponse metadata = fileService.getFileMetadata(fileId, userDetails.getId());
+
+        ContentDisposition disposition = ContentDisposition.inline()
+                .filename(metadata.originalFileName(), StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(metadata.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .body(fileResource);
+    }
+
     @PatchMapping("/{fileId}/trash")
     public ResponseEntity<FileMetadataResponse> moveToTrash(
             @PathVariable UUID fileId,
