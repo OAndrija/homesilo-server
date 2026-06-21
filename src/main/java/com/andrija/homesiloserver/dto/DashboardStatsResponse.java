@@ -7,6 +7,7 @@ public record DashboardStatsResponse(
         long storageQuotaBytes,
         long totalFiles,
         long filesThisWeek,
+        long starredCount,
         List<StorageBreakdownItem> storageBreakdown,
         List<FileMetadataResponse> recentlyTrashed
 ) {

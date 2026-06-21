@@ -114,6 +114,15 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public PageResponse<FileMetadataResponse> listStarredFiles(UUID requesterId, Pageable pageable) {
+        return PageResponse.from(
+                fileMetadataRepository
+                        .findByOwnerIdAndStarredTrueAndTrashedFalse(requesterId, pageable)
+                        .map(FileMetadataResponse::from)
+        );
+    }
+
+    @Override
     public PageResponse<FileMetadataResponse> searchFiles(UUID requesterId, String query, Pageable pageable) {
         return PageResponse.from(
                 fileMetadataRepository
@@ -127,6 +136,15 @@ public class FileServiceImpl implements FileService {
         return PageResponse.from(
                 fileMetadataRepository
                         .findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(requesterId, query, pageable)
+                        .map(FileMetadataResponse::from)
+        );
+    }
+
+    @Override
+    public PageResponse<FileMetadataResponse> searchStarredFiles(UUID requesterId, String query, Pageable pageable) {
+        return PageResponse.from(
+                fileMetadataRepository
+                        .findByOwnerIdAndStarredTrueAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(requesterId, query, pageable)
                         .map(FileMetadataResponse::from)
         );
     }
@@ -162,6 +180,16 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public FileMetadataResponse toggleStar(UUID fileId, UUID requesterId) {
+        FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
+        if (metadata.isTrashed()) {
+            throw new IllegalStateException("Cannot star a trashed file");
+        }
+        metadata.setStarred(!metadata.isStarred());
+        return FileMetadataResponse.from(metadata);
+    }
+
+    @Override
     @Transactional
     public void deletePermanently(UUID fileId, UUID requesterId) {
         FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
@@ -180,6 +208,11 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public long getStarredCount(UUID requesterId) {
+        return fileMetadataRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(requesterId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public DashboardStatsResponse getDashboardStats(UUID requesterId) {
         User user = userRepository.findById(requesterId)
@@ -191,6 +224,7 @@ public class FileServiceImpl implements FileService {
         LocalDateTime weekAgo = LocalDateTime.now().minusDays(7);
         long filesThisWeek = fileMetadataRepository
                 .countByOwnerIdAndTrashedFalseAndUploadedAtAfter(requesterId, weekAgo);
+        long starredCount = fileMetadataRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(requesterId);
 
         List<StorageBreakdownItem> breakdown = buildBreakdown(
                 fileMetadataRepository.sumSizeByContentTypeForOwner(requesterId)
@@ -207,6 +241,7 @@ public class FileServiceImpl implements FileService {
                 user.getStorageQuotaBytes(),
                 totalFiles,
                 filesThisWeek,
+                starredCount,
                 breakdown,
                 recentlyTrashed
         );

@@ -49,6 +49,9 @@ public class FileMetadata {
     private boolean trashed = false;
 
     @Column
+    private boolean starred = false;
+
+    @Column
     private LocalDateTime trashedAt;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

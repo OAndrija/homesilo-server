@@ -11,6 +11,7 @@ public record FileMetadataResponse(
         String contentType,
         long size,
         boolean trashed,
+        boolean starred,
         LocalDateTime uploadedAt,
         LocalDateTime lastModified,
         LocalDateTime trashedAt
@@ -22,6 +23,7 @@ public record FileMetadataResponse(
                 fileMetadata.getContentType(),
                 fileMetadata.getSize(),
                 fileMetadata.isTrashed(),
+                fileMetadata.isStarred(),
                 fileMetadata.getUploadedAt(),
                 fileMetadata.getLastModified(),
                 fileMetadata.getTrashedAt()

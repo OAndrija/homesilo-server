@@ -16,13 +16,18 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
 
     Page<FileMetadata> findByOwnerIdAndTrashedFalse(UUID ownerId, Pageable pageable);
     Page<FileMetadata> findByOwnerIdAndTrashedTrue(UUID ownerId, Pageable pageable);
+    Page<FileMetadata> findByOwnerIdAndStarredTrueAndTrashedFalse(UUID ownerId, Pageable pageable);
 
-    Page<FileMetadata> findByOwnerIdAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(UUID ownerId, String query, Pageable pageable);
-    Page<FileMetadata> findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(UUID ownerId, String query, Pageable pageable);
-
+    Page<FileMetadata> findByOwnerIdAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(
+            UUID ownerId, String query, Pageable pageable);
+    Page<FileMetadata> findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(
+            UUID ownerId, String query, Pageable pageable);
+    Page<FileMetadata> findByOwnerIdAndStarredTrueAndTrashedFalseAndOriginalFileNameContainingIgnoreCase(
+            UUID ownerId, String query, Pageable pageable);
     Optional<FileMetadata> findByStoredFileNameAndOwnerId(String storedFileName, UUID userId);
 
     long countByOwnerIdAndTrashedFalse(UUID ownerId);
+    long countByOwnerIdAndStarredTrueAndTrashedFalse(UUID ownerId);
     long countByOwnerIdAndTrashedFalseAndUploadedAtAfter(UUID ownerId, LocalDateTime since);
 
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner.id = :ownerId AND f.trashed = false")
