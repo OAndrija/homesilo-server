@@ -34,6 +34,14 @@ public class FileController {
 
     @GetMapping
     public ResponseEntity<PageResponse<FileMetadataResponse>> listActiveFiles(
+            @PageableDefault(size = 20, sort = "lastModified", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(fileService.listFiles(userDetails.getId(), pageable));
+    }
+
+    @GetMapping("/recent")
+    public ResponseEntity<PageResponse<FileMetadataResponse>> listRecentlyUploadedActiveFiles(
             @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
@@ -42,7 +50,7 @@ public class FileController {
 
     @GetMapping("/trash")
     public ResponseEntity<PageResponse<FileMetadataResponse>> listTrashedFiles(
-            @PageableDefault(size = 20, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @PageableDefault(size = 20, sort = "trashedAt", direction = Sort.Direction.DESC) Pageable pageable,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.ok(fileService.listTrashedFiles(userDetails.getId(), pageable));
