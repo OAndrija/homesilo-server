@@ -48,7 +48,8 @@ public class FileMetadata {
     @Builder.Default
     private boolean trashed = false;
 
-    @Column
+    @Column(nullable = false)
+    @Builder.Default
     private boolean starred = false;
 
     @Column
