@@ -16,6 +16,7 @@ import com.andrija.homesiloserver.service.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageRequest;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Paths;
@@ -33,6 +35,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 @Slf4j
@@ -186,6 +190,7 @@ public class FileServiceImpl implements FileService {
             throw new IllegalStateException("Cannot star a trashed file");
         }
         metadata.setStarred(!metadata.isStarred());
+        fileMetadataRepository.save(metadata);
         return FileMetadataResponse.from(metadata);
     }
 
@@ -245,6 +250,45 @@ public class FileServiceImpl implements FileService {
                 breakdown,
                 recentlyTrashed
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Resource downloadAsZip(List<UUID> fileIds, UUID requesterId) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ZipOutputStream zip = new ZipOutputStream(baos)) {
+                Map<String, Integer> nameCount = new HashMap<>();
+                for (UUID fileId : fileIds) {
+                    FileMetadata metadata = getMetadataAndVerifyOwner(fileId, requesterId);
+                    if (metadata.isTrashed()) continue;
+
+                    Resource resource = fileStorageService.load(requesterId, metadata.getStoredFileName());
+                    String name = metadata.getOriginalFileName();
+
+                    // deduplicate names: file.txt → file(1).txt
+                    if (nameCount.containsKey(name)) {
+                        int count = nameCount.get(name) + 1;
+                        nameCount.put(name, count);
+                        int dot = name.lastIndexOf('.');
+                        name = dot >= 0
+                                ? name.substring(0, dot) + "(" + count + ")" + name.substring(dot)
+                                : name + "(" + count + ")";
+                    } else {
+                        nameCount.put(name, 0);
+                    }
+
+                    zip.putNextEntry(new ZipEntry(name));
+                    try (InputStream is = resource.getInputStream()) {
+                        is.transferTo(zip);
+                    }
+                    zip.closeEntry();
+                }
+            }
+            return new ByteArrayResource(baos.toByteArray());
+        } catch (IOException e) {
+            throw new FileStorageException("Failed to create zip archive", e);
+        }
     }
 
     // HELPER METHODS

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -56,6 +57,14 @@ public class FileController {
         return ResponseEntity.ok(fileService.listTrashedFiles(userDetails.getId(), pageable));
     }
 
+    @GetMapping("/starred")
+    public ResponseEntity<PageResponse<FileMetadataResponse>> listStarredFiles(
+            @PageableDefault(size = 20, sort = "lastModified", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(fileService.listStarredFiles(userDetails.getId(), pageable));
+    }
+
     @GetMapping("/{fileId}/metadata")
     public ResponseEntity<FileMetadataResponse> getMetadata(
             @PathVariable UUID fileId,
@@ -80,6 +89,21 @@ public class FileController {
                 .contentType(MediaType.parseMediaType(metadata.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
                 .body(fileResource);
+    }
+
+    @PostMapping("/download-zip")
+    public ResponseEntity<Resource> downloadAsZip(
+            @RequestBody List<UUID> fileIds,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        Resource zip = fileService.downloadAsZip(fileIds, userDetails.getId());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        ContentDisposition.attachment()
+                                .filename("homesilo-files.zip", StandardCharsets.UTF_8)
+                                .build().toString())
+                .body(zip);
     }
 
     @GetMapping("/{fileId}/preview")
@@ -116,6 +140,14 @@ public class FileController {
         return ResponseEntity.ok(fileService.restore(fileId, userDetails.getId()));
     }
 
+    @PatchMapping("/{fileId}/star")
+    public ResponseEntity<FileMetadataResponse> starFile(
+            @PathVariable UUID fileId,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(fileService.toggleStar(fileId, userDetails.getId()));
+    }
+
     @DeleteMapping("/{fileId}")
     public ResponseEntity<Void> deleteFile(
             @PathVariable UUID fileId,
@@ -148,5 +180,14 @@ public class FileController {
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.ok(fileService.searchTrashedFiles(userDetails.getId(), query, pageable));
+    }
+
+    @GetMapping("/starred/search")
+    public ResponseEntity<PageResponse<FileMetadataResponse>> searchStarredFiles(
+            @RequestParam String query,
+            @PageableDefault(size = 20, sort = "lastModified", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(fileService.searchStarredFiles(userDetails.getId(), query, pageable));
     }
 }
