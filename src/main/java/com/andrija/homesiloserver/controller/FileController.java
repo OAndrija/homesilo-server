@@ -1,6 +1,7 @@
 package com.andrija.homesiloserver.controller;
 
 import com.andrija.homesiloserver.dto.FileMetadataResponse;
+import com.andrija.homesiloserver.dto.MoveFileRequest;
 import com.andrija.homesiloserver.dto.PageResponse;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.service.FileService;
@@ -146,6 +147,17 @@ public class FileController {
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.ok(fileService.toggleStar(fileId, userDetails.getId()));
+    }
+
+    @PatchMapping("/{fileId}/move")
+    public ResponseEntity<FileMetadataResponse> moveFile(
+            @PathVariable UUID fileId,
+            @RequestBody MoveFileRequest request,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(
+                fileService.moveToFolder(fileId, request.targetFolderId(), userDetails.getId())
+        );
     }
 
     @DeleteMapping("/{fileId}")

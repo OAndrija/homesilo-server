@@ -14,7 +14,9 @@ public record FileMetadataResponse(
         boolean starred,
         LocalDateTime uploadedAt,
         LocalDateTime lastModified,
-        LocalDateTime trashedAt
+        LocalDateTime trashedAt,
+        UUID folderId,
+        String folderName
 ) {
     public static FileMetadataResponse from(FileMetadata fileMetadata) {
         return new FileMetadataResponse(
@@ -26,7 +28,9 @@ public record FileMetadataResponse(
                 fileMetadata.isStarred(),
                 fileMetadata.getUploadedAt(),
                 fileMetadata.getLastModified(),
-                fileMetadata.getTrashedAt()
+                fileMetadata.getTrashedAt(),
+                fileMetadata.getFolder() != null ? fileMetadata.getFolder().getId()   : null,
+                fileMetadata.getFolder() != null ? fileMetadata.getFolder().getName() : null
         );
     }
 }

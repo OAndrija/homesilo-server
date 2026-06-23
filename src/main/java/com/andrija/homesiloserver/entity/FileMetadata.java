@@ -11,7 +11,8 @@ import java.util.UUID;
         name = "file_metadata",
         indexes = {
                 @Index(name = "idx_file_metadata_owner_id", columnList = "owner_id"),
-                @Index(name = "idx_file_metadata_trashed_at", columnList = "trashed_at")
+                @Index(name = "idx_file_metadata_trashed_at", columnList = "trashed_at"),
+                @Index(name = "idx_file_metadata_folder_id",  columnList = "folder_id")
         },
         uniqueConstraints = {
                 @UniqueConstraint(
@@ -58,6 +59,10 @@ public class FileMetadata {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "folder_id", nullable = true)
+    private Folder folder;
 
     @Column(nullable = false)
     private LocalDateTime lastModified;

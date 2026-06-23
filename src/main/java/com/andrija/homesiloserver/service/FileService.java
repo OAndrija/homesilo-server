@@ -30,6 +30,8 @@ public interface FileService {
     FileMetadataResponse toggleStar(UUID fileId, UUID requesterId);
     DashboardStatsResponse getDashboardStats(UUID requesterId);
 
+    FileMetadataResponse moveToFolder(UUID fileId, UUID targetFolderId, UUID requesterId);
+
     void deletePermanently(UUID fileId, UUID requesterId);
     long getStorageUsed(UUID requesterId);
     long getStarredCount(UUID requesterId);

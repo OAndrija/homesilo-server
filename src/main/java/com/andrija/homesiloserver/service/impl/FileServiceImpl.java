@@ -5,11 +5,14 @@ import com.andrija.homesiloserver.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.dto.PageResponse;
 import com.andrija.homesiloserver.dto.StorageBreakdownItem;
 import com.andrija.homesiloserver.entity.FileMetadata;
+import com.andrija.homesiloserver.entity.Folder;
 import com.andrija.homesiloserver.entity.User;
 import com.andrija.homesiloserver.exception.FileNotFoundException;
 import com.andrija.homesiloserver.exception.FileStorageException;
+import com.andrija.homesiloserver.exception.FolderNotFoundException;
 import com.andrija.homesiloserver.exception.UserNotFoundException;
 import com.andrija.homesiloserver.repository.FileMetadataRepository;
+import com.andrija.homesiloserver.repository.FolderRepository;
 import com.andrija.homesiloserver.repository.UserRepository;
 import com.andrija.homesiloserver.service.FileService;
 import com.andrija.homesiloserver.service.FileStorageService;
@@ -45,6 +48,7 @@ public class FileServiceImpl implements FileService {
 
     private final FileMetadataRepository fileMetadataRepository;
     private final FileStorageService fileStorageService;
+    private final FolderRepository folderRepository;
     private final UserRepository userRepository;
     private final Tika tika;
 
@@ -250,6 +254,35 @@ public class FileServiceImpl implements FileService {
                 breakdown,
                 recentlyTrashed
         );
+    }
+
+    @Override
+    public FileMetadataResponse moveToFolder(UUID fileId, UUID targetFolderId, UUID requesterId) {
+        FileMetadata file = getMetadataAndVerifyOwner(fileId, requesterId);
+
+        if (file.isTrashed()) {
+            throw new IllegalStateException("Cannot move a trashed file — restore it first");
+        }
+
+        if (targetFolderId == null) {
+            // Move to root
+            file.setFolder(null);
+        } else {
+            Folder targetFolder = folderRepository.findById(targetFolderId)
+                    .orElseThrow(() -> new FolderNotFoundException("Folder not found: " + targetFolderId));
+
+            if (!targetFolder.getOwner().getId().equals(requesterId)) {
+                throw new FolderNotFoundException("Folder not found: " + targetFolderId);
+            }
+
+            if (targetFolder.isTrashed()) {
+                throw new IllegalStateException("Cannot move a file into a trashed folder");
+            }
+
+            file.setFolder(targetFolder);
+        }
+
+        return FileMetadataResponse.from(fileMetadataRepository.save(file));
     }
 
     @Override

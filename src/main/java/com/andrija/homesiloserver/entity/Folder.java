@@ -2,7 +2,6 @@ package com.andrija.homesiloserver.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-import org.apache.logging.log4j.util.Lazy;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -23,7 +22,7 @@ import java.util.UUID;
 public class Folder {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(updatable = false, nullable = false)
     private UUID id;
 
