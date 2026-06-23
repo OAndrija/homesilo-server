@@ -54,9 +54,16 @@ public class FileServiceImpl implements FileService {
 
     @Override
     @Transactional
-    public FileMetadataResponse upload(MultipartFile file, UUID requesterId) {
+    public FileMetadataResponse upload(MultipartFile file, UUID requesterId, UUID folderId) {
         User owner = userRepository.findById(requesterId)
                 .orElseThrow(() -> new UserNotFoundException("User not found: " + requesterId));
+
+        Folder folder = null;
+        if (folderId != null) {
+            folder = folderRepository.findById(folderId)
+                    .filter(f -> f.getOwner().getId().equals(requesterId))
+                    .orElseThrow(() -> new FolderNotFoundException("Folder not found: " + folderId));
+        }
 
         String detectedContentType = detectMimeType(file);
         String storedFileName = computeSha256(file);
@@ -76,6 +83,7 @@ public class FileServiceImpl implements FileService {
                 .contentType(detectedContentType)
                 .size(file.getSize())
                 .owner(owner)
+                .folder(folder)
                 .build();
 
         try {

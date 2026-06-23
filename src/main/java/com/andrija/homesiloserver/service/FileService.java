@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface FileService {
-    FileMetadataResponse upload(MultipartFile file, UUID requesterId);
+    FileMetadataResponse upload(MultipartFile file, UUID requesterId, UUID folderId);
 
     Resource download(UUID fileId, UUID requesterId);
     Resource downloadAsZip(List<UUID> fileIds, UUID requesterId);

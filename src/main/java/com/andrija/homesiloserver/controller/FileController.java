@@ -28,10 +28,11 @@ public class FileController {
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FileMetadataResponse> uploadFile(
             @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "folderId", required = false) UUID folderId,
             @AuthenticationPrincipal ServerUserDetails userDetails
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(fileService.upload(file, userDetails.getId()));
+                .body(fileService.upload(file, userDetails.getId(), folderId));
     }
 
     @GetMapping
