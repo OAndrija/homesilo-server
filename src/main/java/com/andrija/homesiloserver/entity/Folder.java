@@ -1,0 +1,84 @@
+package com.andrija.homesiloserver.entity;
+
+import jakarta.persistence.*;
+import lombok.*;
+import org.apache.logging.log4j.util.Lazy;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(
+        name = "folder",
+        indexes = {
+                @Index(name = "idx_folder_owner_id", columnList = "owner_id"),
+                @Index(name = "idx_folder_parent_id", columnList = "parent_id")
+        }
+)
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+@Setter
+@Builder
+public class Folder {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(updatable = false, nullable = false)
+    private UUID id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
+
+    //root level folder is null
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id", nullable = true)
+    private Folder parent;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean trashed = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean starred = false;
+
+    @Column
+    private LocalDateTime trashedAt;
+
+    @Column(nullable = false)
+    private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private LocalDateTime lastModified;
+
+    @PrePersist
+    public void onCreate() {
+        LocalDateTime now =  LocalDateTime.now();
+        this.createdAt = now;
+        this.lastModified = now;
+    }
+
+    @PreUpdate
+    public void onUpdate() {
+        this.lastModified = LocalDateTime.now();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Folder that = (Folder) o;
+        return id != null && id.equals(that.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
+}
+
