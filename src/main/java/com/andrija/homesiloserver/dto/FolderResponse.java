@@ -8,8 +8,8 @@ import java.util.UUID;
 public record FolderResponse(
         UUID id,
         String name,
-        UUID parentId,
-        String parentName,
+        UUID parentId,       // null = root-level folder
+        String parentName,   // null = root-level folder
         boolean trashed,
         LocalDateTime trashedAt,
         LocalDateTime createdAt,
@@ -19,7 +19,6 @@ public record FolderResponse(
         return new FolderResponse(
                 folder.getId(),
                 folder.getName(),
-                folder.getParent(),
                 folder.getParent() != null ? folder.getParent().getId()   : null,
                 folder.getParent() != null ? folder.getParent().getName() : null,
                 folder.isTrashed(),

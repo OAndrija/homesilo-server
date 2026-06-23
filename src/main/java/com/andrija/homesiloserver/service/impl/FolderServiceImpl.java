@@ -133,7 +133,7 @@ public class FolderServiceImpl implements FolderService {
 
     @Override
     @Transactional(readOnly = true)
-    public FolderContentsResponse getRootFolderContents(UUID requesterId, Pageable pageable) {
+    public FolderContentsResponse getRootContents(UUID requesterId, Pageable pageable) {
         List<FolderResponse> subfolders = folderRepository
                 .findByOwnerIdAndParentIsNullAndTrashedFalseOrderByNameAsc(requesterId)
                 .stream()

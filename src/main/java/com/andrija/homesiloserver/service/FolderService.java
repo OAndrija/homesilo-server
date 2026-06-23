@@ -12,7 +12,7 @@ public interface FolderService {
     FolderResponse getFolder(UUID folderId, UUID requesterId);
 
     FolderContentsResponse getFolderContents(UUID folderId, UUID requesterId, Pageable pageable);
-    FolderContentsResponse getRootFolderContents(UUID requesterId, Pageable pageable);
+    FolderContentsResponse getRootContents(UUID requesterId, Pageable pageable);
 
     FolderResponse trashFolder(UUID folderId, UUID requesterId);
     FolderResponse restoreFolder(UUID folderId, UUID requesterId);

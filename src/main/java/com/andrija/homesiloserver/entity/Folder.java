@@ -10,15 +10,19 @@ import java.util.UUID;
 @Table(
         name = "folder",
         indexes = {
-                @Index(name = "idx_folder_owner_id", columnList = "owner_id"),
+                @Index(name = "idx_folder_owner_id",  columnList = "owner_id"),
                 @Index(name = "idx_folder_parent_id", columnList = "parent_id")
         }
+        // Note: unique constraint on (owner_id, parent_id, name) is enforced in the
+        // service layer rather than as a DB constraint, because most databases treat
+        // NULL as distinct in unique constraints — meaning two root-level folders
+        // (parent_id IS NULL) with the same name would pass a DB-level constraint.
 )
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Getter
 @Setter
-@Builder
 public class Folder {
 
     @Id
@@ -33,7 +37,7 @@ public class Folder {
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
-    //root level folder is null
+    // null = root-level folder; non-null = nested inside another folder
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id", nullable = true)
     private Folder parent;
@@ -56,14 +60,14 @@ public class Folder {
     private LocalDateTime lastModified;
 
     @PrePersist
-    public void onCreate() {
-        LocalDateTime now =  LocalDateTime.now();
+    protected void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
         this.createdAt = now;
         this.lastModified = now;
     }
 
     @PreUpdate
-    public void onUpdate() {
+    protected void onUpdate() {
         this.lastModified = LocalDateTime.now();
     }
 
@@ -80,4 +84,3 @@ public class Folder {
         return getClass().hashCode();
     }
 }
-
