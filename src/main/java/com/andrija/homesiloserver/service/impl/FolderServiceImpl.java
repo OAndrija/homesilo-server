@@ -153,6 +153,16 @@ public class FolderServiceImpl implements FolderService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public PageResponse<FolderResponse> listTrashedFolders(UUID requesterId, Pageable pageable) {
+        return PageResponse.from(
+                folderRepository
+                        .findTopLevelTrashedFolders(requesterId, pageable)
+                        .map(FolderResponse::from)
+        );
+    }
+
+    @Override
     @Transactional
     public FolderResponse trashFolder(UUID folderId, UUID requesterId) {
         Folder folder = getFolderAndVerifyOwner(folderId, requesterId);

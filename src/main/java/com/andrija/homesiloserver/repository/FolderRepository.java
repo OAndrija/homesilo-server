@@ -1,6 +1,8 @@
 package com.andrija.homesiloserver.repository;
 
 import com.andrija.homesiloserver.entity.Folder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -49,4 +51,9 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
             @Param("ownerId") UUID ownerId,
             @Param("parentIds") List<UUID> parentIds
     );
+
+    // Top-level trashed folders: trashed folders whose parent is either null or not trashed.
+    // These are what appear directly in the Trash view (same logic as findTopLevelTrashedFiles).
+    @Query("SELECT f FROM Folder f LEFT JOIN f.parent p WHERE f.owner.id = :ownerId AND f.trashed = true AND (f.parent IS NULL OR p.trashed = false)")
+    Page<Folder> findTopLevelTrashedFolders(@Param("ownerId") UUID ownerId, Pageable pageable);
 }

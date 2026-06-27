@@ -35,6 +35,21 @@ public class FolderController {
         return ResponseEntity.ok(folderService.getRootContents(userDetails.getId(), pageable));
     }
 
+    // ── Trash ─────────────────────────────────────────────────────────────────
+
+    /**
+     * GET /api/v1/folders/trash
+     * Returns top-level trashed folders (folders whose parent is not also trashed).
+     * Must be declared before /{folderId} so "trash" isn't parsed as a UUID.
+     */
+    @GetMapping("/trash")
+    public ResponseEntity<PageResponse<FolderResponse>> listTrashedFolders(
+            @PageableDefault(size = 20, sort = "trashedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails userDetails
+    ) {
+        return ResponseEntity.ok(folderService.listTrashedFolders(userDetails.getId(), pageable));
+    }
+
     // ── Folder CRUD ───────────────────────────────────────────────────────────
 
     /**

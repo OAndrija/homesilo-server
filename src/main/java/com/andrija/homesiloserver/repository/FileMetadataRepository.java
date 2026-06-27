@@ -72,4 +72,22 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
             @Param("ownerId") UUID ownerId,
             @Param("folderIds") List<UUID> folderIds
     );
+
+    // Top-level trashed files: trashed files whose parent folder is either
+    // null (root) or not itself trashed. LEFT JOIN prevents the implicit
+    // inner join from excluding null-folder rows.
+    @Query("SELECT f FROM FileMetadata f LEFT JOIN f.folder fo " +
+            "WHERE f.owner.id = :ownerId AND f.trashed = true " +
+            "AND (f.folder IS NULL OR fo.trashed = false)")
+    Page<FileMetadata> findTopLevelTrashedFiles(
+            @Param("ownerId") UUID ownerId, Pageable pageable);
+
+    @Query("SELECT f FROM FileMetadata f LEFT JOIN f.folder fo " +
+            "WHERE f.owner.id = :ownerId AND f.trashed = true " +
+            "AND (f.folder IS NULL OR fo.trashed = false) " +
+            "AND LOWER(f.originalFileName) LIKE LOWER(CONCAT('%', :query, '%'))")
+    Page<FileMetadata> findTopLevelTrashedFilesByName(
+            @Param("ownerId") UUID ownerId,
+            @Param("query") String query,
+            Pageable pageable);
 }

@@ -13,7 +13,7 @@ public interface FolderService {
 
     FolderContentsResponse getFolderContents(UUID folderId, UUID requesterId, Pageable pageable);
     FolderContentsResponse getRootContents(UUID requesterId, Pageable pageable);
-
+    PageResponse<FolderResponse> listTrashedFolders(UUID requesterId, Pageable pageable);
     FolderResponse trashFolder(UUID folderId, UUID requesterId);
     FolderResponse restoreFolder(UUID folderId, UUID requesterId);
 

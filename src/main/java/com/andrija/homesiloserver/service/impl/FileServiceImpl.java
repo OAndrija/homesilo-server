@@ -124,7 +124,7 @@ public class FileServiceImpl implements FileService {
     public PageResponse<FileMetadataResponse> listTrashedFiles(UUID requesterId, Pageable pageable) {
         return PageResponse.from(
                 fileMetadataRepository
-                        .findByOwnerIdAndTrashedTrue(requesterId, pageable)
+                        .findTopLevelTrashedFiles(requesterId, pageable)
                         .map(FileMetadataResponse::from)
         );
     }
@@ -151,7 +151,7 @@ public class FileServiceImpl implements FileService {
     public PageResponse<FileMetadataResponse> searchTrashedFiles(UUID requesterId, String query, Pageable pageable) {
         return PageResponse.from(
                 fileMetadataRepository
-                        .findByOwnerIdAndTrashedTrueAndOriginalFileNameContainingIgnoreCase(requesterId, query, pageable)
+                        .findTopLevelTrashedFilesByName(requesterId, query, pageable)
                         .map(FileMetadataResponse::from)
         );
     }
