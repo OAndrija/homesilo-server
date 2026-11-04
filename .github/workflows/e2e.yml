@@ -1,0 +1,138 @@
+name: E2E
+
+# Full-stack test: the Docker Compose stack (nginx + client, API, PostgreSQL) is
+# started on top of a database and blob store created by the original pre-Flyway
+# server, then driven in a real browser. Proves the upgrade path and the
+# production wiring (cookies, CSRF, proxying, streaming downloads) end to end.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Last commit before the Flyway / cookie-auth rewrite: the "old version" users upgrade from.
+  LEGACY_SHA: 0cae3dd585bd35d399d974f400ca6453337b5119
+  DB_PASSWORD: e2e-db-password
+  JWT_SECRET: e2e-jwt-secret-that-is-comfortably-longer-than-32-bytes
+  COMPOSE: docker compose -f docker-compose.yml -f e2e/docker-compose.e2e.yml
+
+jobs:
+  upgrade-and-ui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: homesilo-server
+
+      - name: Pick the matching client branch
+        id: client
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/OAndrija/homesilo-client "$branch" >/dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OAndrija/homesilo-client
+          ref: ${{ steps.client.outputs.ref }}
+          path: homesilo-client
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.LEGACY_SHA }}
+          path: legacy-server
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+          cache-dependency-path: legacy-server/pom.xml
+
+      - name: Build the legacy server
+        working-directory: legacy-server
+        run: |
+          sed -i 's/ru++ntime/runtime/' pom.xml   # typo in that revision's pom
+          ./mvnw -B -q -DskipTests package
+
+      - name: Start PostgreSQL
+        working-directory: homesilo-server
+        run: |
+          mkdir -p e2e-data/storage
+          $COMPOSE up -d --wait db
+
+      - name: Seed data through the legacy server
+        working-directory: homesilo-server
+        run: |
+          DB_URL=jdbc:postgresql://localhost:5432/homesilo DB_USERNAME=homesilo \
+          JWT_SECRET="$(openssl rand -base64 48)" JWT_EXPIRATION=3600000 \
+          STORAGE_BASE_PATH="$PWD/e2e-data/storage" \
+            java -jar ../legacy-server/target/homesilo-server-0.0.1-SNAPSHOT.jar > legacy.log 2>&1 &
+          echo $! > legacy.pid
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/users/me || true)
+            [ "$code" = 401 ] || [ "$code" = 403 ] && break
+            sleep 2
+          done
+          ./e2e/seed-legacy.sh
+          kill "$(cat legacy.pid)" && sleep 3
+          # The new server runs as a non-root container user.
+          chmod -R a+rwX e2e-data/storage
+
+      - name: Start the full stack on top of the legacy data
+        working-directory: homesilo-server
+        run: $COMPOSE up -d --build --wait --wait-timeout 300
+
+      - name: Show migration log
+        working-directory: homesilo-server
+        run: $COMPOSE logs server | grep -iE "flyway|migrat|baseline|Started" || true
+
+      - name: Smoke-test the API through nginx
+        run: |
+          # A wrong password must be a clean 401 problem response, not a proxy/CORS error.
+          out=$(curl -s -w '\n%{http_code}' -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' -H 'Origin: http://localhost:8080' \
+            -d '{"username":"legacy-alice","password":"definitely-wrong"}')
+          echo "$out"
+          [ "$(echo "$out" | tail -1)" = 401 ]
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run browser tests
+        working-directory: homesilo-server/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+
+      - name: Dump logs
+        if: failure()
+        working-directory: homesilo-server
+        run: |
+          cat legacy.log || true
+          $COMPOSE logs
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            homesilo-server/e2e/playwright-report/
+            homesilo-server/e2e/test-results/
+          retention-days: 7
+
+      - name: Tear down
+        if: always()
+        working-directory: homesilo-server
+        run: $COMPOSE down -v
