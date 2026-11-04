@@ -55,7 +55,12 @@ public record HomesiloProperties(
             @DefaultValue("0 30 3 * * *") @NotBlank String purgeCron
     ) {}
 
+    /**
+     * Origins allowed to call the API cross-origin. Empty (the default) disables
+     * CORS handling: the bundled nginx and the Angular dev proxy both serve UI and
+     * API from one origin, so it is only needed for a UI hosted elsewhere.
+     */
     public record Cors(
-            @DefaultValue("http://localhost:4200") List<String> allowedOrigins
+            @DefaultValue List<String> allowedOrigins
     ) {}
 }

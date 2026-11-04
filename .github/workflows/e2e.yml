@@ -96,6 +96,15 @@ jobs:
         working-directory: homesilo-server
         run: $COMPOSE logs server | grep -iE "flyway|migrat|baseline|Started" || true
 
+      - name: Smoke-test the API through nginx
+        run: |
+          # A wrong password must be a clean 401 problem response, not a proxy/CORS error.
+          out=$(curl -s -w '\n%{http_code}' -X POST http://localhost:8080/api/v1/auth/login \
+            -H 'Content-Type: application/json' -H 'Origin: http://localhost:8080' \
+            -d '{"username":"legacy-alice","password":"definitely-wrong"}')
+          echo "$out"
+          [ "$(echo "$out" | tail -1)" = 401 ]
+
       - uses: actions/setup-node@v4
         with:
           node-version: 22

@@ -70,7 +70,7 @@ All settings are environment variables (mapped in `application.properties`).
 | `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |
 | `MAX_UPLOAD_SIZE` | `5GB` | Largest single upload |
 | `TRASH_RETENTION_DAYS` | `30` | Purge trash older than this; `0` keeps it forever |
-| `CORS_ALLOWED_ORIGINS` | `http://localhost:4200` | Only needed if the UI is on another origin |
+| `CORS_ALLOWED_ORIGINS` | — (CORS off) | Comma-separated origins, only if the UI is served from a different origin |
 
 ## Architecture
 

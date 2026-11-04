@@ -82,20 +82,26 @@ public class SecurityConfig {
     }
 
     /**
-     * Only needed when the UI is served from a different origin than the API
-     * (e.g. {@code ng serve} without the dev proxy). Behind the bundled nginx
-     * both share one origin and CORS never comes into play.
+     * Only registers CORS rules when origins are configured. Behind the bundled
+     * nginx (or the dev proxy) UI and API share one origin; leaving CORS out also
+     * avoids false "cross-origin" rejections when a proxy rewrites host or port.
      */
     @Bean
     public CorsConfigurationSource corsConfigurationSource(HomesiloProperties properties) {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        List<String> origins = properties.cors().allowedOrigins().stream()
+                .filter(origin -> origin != null && !origin.isBlank())
+                .toList();
+        if (origins.isEmpty()) {
+            return source;
+        }
+
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(properties.cors().allowedOrigins());
+        config.setAllowedOrigins(origins);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of(HttpHeaders.CONTENT_DISPOSITION));
         config.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return source;
     }
