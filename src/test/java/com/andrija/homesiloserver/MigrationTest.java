@@ -3,7 +3,7 @@ package com.andrija.homesiloserver;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -18,8 +18,7 @@ class MigrationTest {
 
     @Test
     void legacyDatabaseIsBaselinedUpgradedAndGetsAnAdmin() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource(
-                "jdbc:h2:mem:legacy-" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL", "sa", "");
+        SingleConnectionDataSource dataSource = dataSource("legacy");
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
 
         // What Hibernate's ddl-auto=update produced before this change (no Flyway history).
@@ -41,8 +40,7 @@ class MigrationTest {
 
     @Test
     void existingAdminIsLeftAlone() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource(
-                "jdbc:h2:mem:fresh-" + UUID.randomUUID() + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL", "sa", "");
+        SingleConnectionDataSource dataSource = dataSource("fresh");
         JdbcTemplate jdbc = new JdbcTemplate(dataSource);
         Flyway.configure().dataSource(dataSource).target("2").load().migrate();
         insertUser(jdbc, "old", "USER", "2025-01-01");
@@ -51,6 +49,12 @@ class MigrationTest {
         Flyway.configure().dataSource(dataSource).load().migrate();
 
         assertThat(jdbc.queryForObject("SELECT role FROM users WHERE username = 'old'", String.class)).isEqualTo("USER");
+    }
+
+    /** One shared connection: H2 ties check constraints to the session that created them. */
+    private static SingleConnectionDataSource dataSource(String name) {
+        return new SingleConnectionDataSource(
+                "jdbc:h2:mem:" + name + "-" + UUID.randomUUID() + ";MODE=PostgreSQL", "sa", "", true);
     }
 
     private static void insertUser(JdbcTemplate jdbc, String username, String role, String createdOn) {
