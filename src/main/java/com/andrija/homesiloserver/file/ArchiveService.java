@@ -102,7 +102,7 @@ public class ArchiveService {
             }
             List<UUID> next = new ArrayList<>();
             for (Folder child : folderRepository.findChildren(ownerId, level, false)) {
-                String parentPath = paths.get(child.getParentId());
+                String parentPath = paths.get(child.parentFolderId());
                 String path = parentPath + names.claim(parentPath, child.getName()) + "/";
                 paths.put(child.getId(), path);
                 entries.add(Entry.directory(path));

@@ -78,7 +78,8 @@ public class Folder {
     @Column(nullable = false)
     private LocalDateTime lastModified;
 
-    public UUID getParentId() {
+    /** Not a bean getter on purpose: a `getParentId` would make Spring Data treat `parentId` as a mapped property. */
+    public UUID parentFolderId() {
         return parent != null ? parent.getId() : null;
     }
 

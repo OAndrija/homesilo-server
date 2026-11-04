@@ -129,7 +129,7 @@ public class FolderService {
     public FolderResponse rename(UUID folderId, String newName, UUID ownerId) {
         Folder folder = getWritable(folderId, ownerId);
         String name = newName.trim();
-        assertNameAvailable(ownerId, folder.getParentId(), name, folderId);
+        assertNameAvailable(ownerId, folder.parentFolderId(), name, folderId);
         folder.setName(name);
         return FolderResponse.from(folder);
     }
@@ -184,7 +184,7 @@ public class FolderService {
         if (folder.getParent() != null && folder.getParent().isTrashed()) {
             folder.setParent(null);
         }
-        folder.setName(uniqueName(ownerId, folder.getParentId(), folder.getName(), folderId));
+        folder.setName(uniqueName(ownerId, folder.parentFolderId(), folder.getName(), folderId));
 
         List<UUID> ids = new ArrayList<>(collectDescendantIds(folderId, ownerId, true));
         ids.add(folderId);
