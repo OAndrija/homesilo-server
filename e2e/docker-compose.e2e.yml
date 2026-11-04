@@ -1,0 +1,9 @@
+# Test-only overrides: expose PostgreSQL so the legacy server can seed it, and
+# keep blobs in a bind mount shared with that legacy server.
+services:
+  db:
+    ports:
+      - "5432:5432"
+  server:
+    volumes:
+      - ./e2e-data/storage:/data/storage

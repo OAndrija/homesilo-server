@@ -36,3 +36,9 @@ build/
 ### HomeSilo ###
 .env
 data/
+e2e-data/
+e2e/node_modules/
+e2e/playwright-report/
+e2e/test-results/
+legacy.log
+legacy.pid

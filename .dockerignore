@@ -7,3 +7,7 @@ data/
 *.iml
 .env
 docker-compose.yml
+e2e/
+e2e-data/
+legacy.log
+legacy.pid
