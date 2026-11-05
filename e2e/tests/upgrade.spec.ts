@@ -57,7 +57,7 @@ test('a user from the old version signs in with their old password and is promot
   await expect(page.getByText(`Welcome back, ${ALICE.username}`)).toBeVisible();
 
   await accountMenu(page, 'Settings');
-  await expect(page.getByText('Administrator')).toBeVisible();
+  await expect(page.getByText('Administrator', { exact: true })).toBeVisible();
 });
 
 test('files and folders from the old version are all there and downloadable', async ({ page }) => {
