@@ -28,6 +28,12 @@ function row(page: Page, name: string) {
   return page.locator('tr', { has: page.locator('td.file-name', { hasText: name }) });
 }
 
+/** Settings and Sign out live in the account menu at the top right. */
+async function accountMenu(page: Page, item: 'Settings' | 'Sign out') {
+  await page.click('button.account-trigger');
+  await page.getByRole('menuitem', { name: item }).click();
+}
+
 test('security headers are served by nginx', async ({ request }) => {
   const response = await request.get('/');
   expect(response.ok()).toBeTruthy();
@@ -44,7 +50,7 @@ test('a user from the old version signs in with their old password and is promot
   await signIn(page, ALICE.username, ALICE.password);
   await expect(page.getByText(`Welcome back, ${ALICE.username}`)).toBeVisible();
 
-  await page.click('a[href="/settings"]');
+  await accountMenu(page, 'Settings');
   await expect(page.getByText('Administrator')).toBeVisible();
 });
 
@@ -152,7 +158,7 @@ test('changing the password ends the old session and the new one works', async (
   await signIn(otherPage, ALICE.username, ALICE.password);
   await page.waitForTimeout(1100); // token timestamps have one-second resolution
 
-  await page.click('a[href="/settings"]');
+  await accountMenu(page, 'Settings');
   await page.fill('#currentPassword', ALICE.password);
   await page.fill('#newPassword', NEW_PASSWORD);
   await page.fill('#confirmPassword', NEW_PASSWORD);
@@ -163,7 +169,7 @@ test('changing the password ends the old session and the new one works', async (
   expect(revoked.status()).toBe(401);
   await other.close();
 
-  await page.getByRole('button', { name: 'Sign out' }).click();
+  await accountMenu(page, 'Sign out');
   await page.waitForURL(/\/login/);
   await signIn(page, ALICE.username, NEW_PASSWORD);
 });
@@ -182,6 +188,6 @@ test('a new user can register and only sees their own files', async ({ page }) =
   const alicesFile = await page.request.get(`/api/v1/files/${seed.files.readme}/metadata`);
   expect(alicesFile.status()).toBe(404);
 
-  await page.click('a[href="/settings"]');
+  await accountMenu(page, 'Settings');
   await expect(page.getByText('User', { exact: true })).toBeVisible();
 });
