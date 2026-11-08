@@ -25,19 +25,7 @@ async function signIn(page: Page, username: string, password: string) {
 }
 
 function row(page: Page, name: string) {
-  return page.locator('tr', { has: page.locator('td.col-name', { hasText: name }) });
-}
-
-/** Opens a row's ⋯ menu and picks an item from it. */
-async function rowAction(page: Page, name: string, action: string) {
-  await row(page, name).getByRole('button', { name: `Actions for ${name}` }).click();
-  await page.getByRole('menuitem', { name: action, exact: true }).click();
-}
-
-/** Settings and Sign out live in the account menu at the bottom of the sidebar. */
-async function accountMenu(page: Page, item: 'Settings' | 'Sign out') {
-  await page.click('button.account-trigger');
-  await page.getByRole('menuitem', { name: item }).click();
+  return page.locator('tr', { has: page.locator('td.file-name', { hasText: name }) });
 }
 
 test('security headers are served by nginx', async ({ request }) => {
@@ -56,8 +44,8 @@ test('a user from the old version signs in with their old password and is promot
   await signIn(page, ALICE.username, ALICE.password);
   await expect(page.getByText(`Welcome back, ${ALICE.username}`)).toBeVisible();
 
-  await accountMenu(page, 'Settings');
-  await expect(page.getByText('Administrator', { exact: true })).toBeVisible();
+  await page.click('a[href="/settings"]');
+  await expect(page.getByText('Administrator')).toBeVisible();
 });
 
 test('files and folders from the old version are all there and downloadable', async ({ page }) => {
@@ -68,9 +56,10 @@ test('files and folders from the old version are all there and downloadable', as
   await expect(row(page, 'readme.txt')).toBeVisible();
 
   // Native browser download through nginx, streamed by the API.
+  await row(page, 'readme.txt').hover();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    rowAction(page, 'readme.txt', 'Download'),
+    row(page, 'readme.txt').getByRole('button', { name: 'Download' }).click(),
   ]);
   expect(download.suggestedFilename()).toBe('readme.txt');
   expect(readFileSync((await download.path())!, 'utf8')).toBe('hello from the old version');
@@ -112,7 +101,8 @@ test('upload, rename, folder zip download', async ({ page }) => {
   });
   await expect(row(page, 'after-upgrade.txt')).toBeVisible();
 
-  await rowAction(page, 'after-upgrade.txt', 'Rename');
+  await row(page, 'after-upgrade.txt').hover();
+  await row(page, 'after-upgrade.txt').getByRole('button', { name: 'Rename file' }).click();
   const input = page.locator('#folderNameInput');
   await expect(input).toBeFocused();
   await page.keyboard.type('renamed');
@@ -120,9 +110,10 @@ test('upload, rename, folder zip download', async ({ page }) => {
   await expect(row(page, 'renamed.txt')).toBeVisible();
 
   await page.click('a[href="/my-files"]');
+  await row(page, 'Photos').hover();
   const [zip] = await Promise.all([
     page.waitForEvent('download'),
-    rowAction(page, 'Photos', 'Download as zip'),
+    row(page, 'Photos').getByRole('button', { name: 'Download folder as zip' }).click(),
   ]);
   expect(zip.suggestedFilename()).toBe('Photos.zip');
   const bytes = readFileSync((await zip.path())!);
@@ -136,11 +127,13 @@ test('trash: restore an old item, trash it again, empty the trash', async ({ pag
   await page.click('a[href="/trash"]');
   await expect(row(page, 'old-draft.txt')).toBeVisible();
 
-  await rowAction(page, 'old-draft.txt', 'Restore');
+  await row(page, 'old-draft.txt').hover();
+  await row(page, 'old-draft.txt').getByRole('button', { name: 'Restore' }).click();
   await expect(row(page, 'old-draft.txt')).toHaveCount(0);
 
   await page.click('a[href="/my-files"]');
-  await rowAction(page, 'old-draft.txt', 'Move to trash');
+  await row(page, 'old-draft.txt').hover();
+  await row(page, 'old-draft.txt').getByRole('button', { name: 'Move to trash' }).click();
   await expect(row(page, 'old-draft.txt')).toHaveCount(0);
 
   await page.click('a[href="/trash"]');
@@ -159,7 +152,7 @@ test('changing the password ends the old session and the new one works', async (
   await signIn(otherPage, ALICE.username, ALICE.password);
   await page.waitForTimeout(1100); // token timestamps have one-second resolution
 
-  await accountMenu(page, 'Settings');
+  await page.click('a[href="/settings"]');
   await page.fill('#currentPassword', ALICE.password);
   await page.fill('#newPassword', NEW_PASSWORD);
   await page.fill('#confirmPassword', NEW_PASSWORD);
@@ -170,7 +163,7 @@ test('changing the password ends the old session and the new one works', async (
   expect(revoked.status()).toBe(401);
   await other.close();
 
-  await accountMenu(page, 'Sign out');
+  await page.getByRole('button', { name: 'Sign out' }).click();
   await page.waitForURL(/\/login/);
   await signIn(page, ALICE.username, NEW_PASSWORD);
 });
@@ -189,6 +182,6 @@ test('a new user can register and only sees their own files', async ({ page }) =
   const alicesFile = await page.request.get(`/api/v1/files/${seed.files.readme}/metadata`);
   expect(alicesFile.status()).toBe(404);
 
-  await accountMenu(page, 'Settings');
+  await page.click('a[href="/settings"]');
   await expect(page.getByText('User', { exact: true })).toBeVisible();
 });
