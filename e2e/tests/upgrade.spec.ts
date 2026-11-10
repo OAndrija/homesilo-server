@@ -200,7 +200,7 @@ test('a new user can register and only sees their own files', async ({ page }) =
   await page.waitForURL(/\/home/);
 
   await page.click('a[href="/my-files"]');
-  await expect(page.getByText('No files yet')).toBeVisible();
+  await expect(page.getByText('Your silo is empty')).toBeVisible();
 
   const alicesFile = await page.request.get(`/api/v1/files/${seed.files.readme}/metadata`);
   expect(alicesFile.status()).toBe(404);

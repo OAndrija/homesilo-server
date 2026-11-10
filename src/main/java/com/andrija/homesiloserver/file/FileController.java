@@ -178,7 +178,7 @@ public class FileController {
         if (type.equals(PDF)) {
             // Chrome's built-in PDF viewer refuses to run inside a sandboxed document, so
             // PDFs get no sandbox; instead they may be framed, but only by HomeSilo itself
-            // (the client's in-app viewer). Spring Security keeps a header set here.
+            // (the client's in-app viewer). SecurityConfig only defaults to DENY.
             response.header("X-Frame-Options", "SAMEORIGIN");
             response.header("Content-Security-Policy", "frame-ancestors 'self'");
         } else {

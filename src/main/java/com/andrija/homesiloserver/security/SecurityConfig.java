@@ -16,6 +16,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
@@ -35,6 +36,8 @@ import java.util.List;
 @EnableWebSecurity
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final String X_FRAME_OPTIONS = "X-Frame-Options";
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -56,6 +59,16 @@ public class SecurityConfig {
                         .ignoringRequestMatchers("/api/v1/auth/**")
                         .ignoringRequestMatchers(request -> request.getHeader(HttpHeaders.AUTHORIZATION) != null))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                // Nothing may frame HomeSilo's API, except where a response opts in itself
+                // (PDF previews, which the client's in-app viewer shows in an iframe).
+                // The stock writer would overwrite that, so DENY is only a default here.
+                .headers(headers -> headers
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                        .addHeaderWriter((request, response) -> {
+                            if (!response.containsHeader(X_FRAME_OPTIONS)) {
+                                response.setHeader(X_FRAME_OPTIONS, "DENY");
+                            }
+                        }))
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .logout(AbstractHttpConfigurer::disable)
