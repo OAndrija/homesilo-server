@@ -175,8 +175,13 @@ public class FileController {
         ResponseEntity.BodyBuilder response = ResponseEntity.ok()
                 .contentType(servedAs)
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition(disposition, content.fileName()));
-        // Chrome's built-in PDF viewer refuses to run inside a sandboxed document.
-        if (!type.equals(PDF)) {
+        if (type.equals(PDF)) {
+            // Chrome's built-in PDF viewer refuses to run inside a sandboxed document, so
+            // PDFs get no sandbox; instead they may be framed, but only by HomeSilo itself
+            // (the client's in-app viewer). Spring Security keeps a header set here.
+            response.header("X-Frame-Options", "SAMEORIGIN");
+            response.header("Content-Security-Policy", "frame-ancestors 'self'");
+        } else {
             response.header("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'");
         }
         return response.body(content.resource());

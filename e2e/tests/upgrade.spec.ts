@@ -73,9 +73,26 @@ test('files and folders from the old version are all there and downloadable', as
   await row(page, 'Photos').dblclick();
   await expect(row(page, 'beach.png')).toBeVisible();
   await expect(row(page, '2024')).toBeVisible();
+  // Files open in the in-app viewer: the image actually loads through nginx and the API.
+  await row(page, 'beach.png').dblclick();
+  const viewer = page.getByRole('dialog', { name: 'Preview of beach.png' });
+  await expect(viewer).toBeVisible();
+  await expect
+    .poll(() => viewer.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBe(1);
+  await page.keyboard.press('Escape');
+  await expect(viewer).toBeHidden();
+
   await row(page, '2024').dblclick();
   await expect(row(page, 'notes.md')).toBeVisible();
   await expect(page.locator('nav.breadcrumb')).toContainText('Photos');
+
+  // Text files are shown in the viewer too.
+  await row(page, 'notes.md').dblclick();
+  await expect(page.getByRole('dialog', { name: 'Preview of notes.md' }).locator('pre')).toContainText(
+    '# Trip notes',
+  );
+  await page.keyboard.press('Escape');
 
   // Starred state survived the upgrade.
   await page.click('a[href="/starred"]');
