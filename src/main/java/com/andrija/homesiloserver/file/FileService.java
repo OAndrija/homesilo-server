@@ -142,8 +142,31 @@ public class FileService {
     @Transactional
     public FileMetadataResponse rename(UUID fileId, String newName, UUID ownerId) {
         FileMetadata file = getActive(fileId, ownerId);
-        file.setOriginalFileName(newName.trim());
+        String name = newName.trim();
+        requireSameExtension(file.getOriginalFileName(), name);
+        file.setOriginalFileName(name);
         return FileMetadataResponse.from(file);
+    }
+
+    /**
+     * A rename can't change the extension: the file's type was detected when it was
+     * uploaded, so "report.pdf" renamed to "report.i" would still be a PDF in previews
+     * but download as an unknown ".i" file. Case may change (.PDF → .pdf), and files
+     * that had no extension can be named freely.
+     */
+    static void requireSameExtension(String currentName, String newName) {
+        String current = extensionOf(currentName);
+        if (current.isEmpty()) return;
+        if (!extensionOf(newName).equalsIgnoreCase(current)) {
+            throw new BadRequestException(
+                    "Keep the ." + current + " extension. Renaming doesn't change the file's type.");
+        }
+    }
+
+    /** The text after the last dot, or "" (also for dot-files like ".env"). */
+    static String extensionOf(String name) {
+        int dot = name.lastIndexOf('.');
+        return dot > 0 && dot < name.length() - 1 ? name.substring(dot + 1) : "";
     }
 
     @Transactional

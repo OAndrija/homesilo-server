@@ -4,7 +4,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.andrija.homesiloserver.common.exception.BadRequestException;
+
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FileServiceUnitTest {
 
@@ -25,6 +29,31 @@ class FileServiceUnitTest {
     void truncatesVeryLongNamesButKeepsTheExtension() {
         String name = FileService.sanitizeFileName("a".repeat(300) + ".txt");
         assertThat(name).hasSize(255).endsWith(".txt");
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "report.pdf, summary.pdf",
+            "report.pdf, summary.PDF",
+            "archive.tar.gz, backup.gz",
+            "README, read me.md",
+            ".env, .env.local"
+    })
+    void renameMayKeepTheExtension(String current, String renamed) {
+        assertThatCode(() -> FileService.requireSameExtension(current, renamed)).doesNotThrowAnyException();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "report.pdf, report.i",
+            "report.pdf, report",
+            "report.pdf, report.pdf.",
+            "photo.jpg, photo.jpg.exe"
+    })
+    void renameCannotChangeTheExtension(String current, String renamed) {
+        assertThatThrownBy(() -> FileService.requireSameExtension(current, renamed))
+                .isInstanceOf(BadRequestException.class)
+                .hasMessageContaining(".");
     }
 
     @Test

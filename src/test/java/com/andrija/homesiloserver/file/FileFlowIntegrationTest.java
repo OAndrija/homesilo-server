@@ -145,6 +145,14 @@ class FileFlowIntegrationTest extends IntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON).content(json("name", "a/b.txt")))
                 .andExpect(status().isBadRequest());
 
+        // The extension is part of the file's type, so a rename keeps it.
+        mvc.perform(patch("/api/v1/files/{id}/rename", id).cookie(session.cookie()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(json("name", "final.i")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/files/{id}/rename", id).cookie(session.cookie()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(json("name", "final")))
+                .andExpect(status().isBadRequest());
+
         mvc.perform(patch("/api/v1/files/{id}/move", id).cookie(session.cookie()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(json("targetFolderId", folder)))
                 .andExpect(jsonPath("$.folderId").value(folder))
