@@ -55,6 +55,10 @@ to `localhost:8080`, so the browser sees a single origin.
 ./mvnw verify    # unit + integration tests against PostgreSQL 17 in Docker (Testcontainers)
 ```
 
+Behaviour scenarios live in `src/test/resources/features` as plain-language Gherkin
+(accounts, files, trash, storage limit). Cucumber runs them in the same `verify`
+against the REST API and writes `target/cucumber-report.html`.
+
 The tests need a running Docker daemon; Testcontainers starts and removes the database
 itself. With Docker you can also run the server without installing PostgreSQL:
 `./mvnw spring-boot:test-run` starts it against a throwaway database container.
