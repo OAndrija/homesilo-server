@@ -11,6 +11,7 @@ import com.andrija.homesiloserver.file.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.folder.dto.CreateFolderRequest;
 import com.andrija.homesiloserver.folder.dto.FolderContentsResponse;
 import com.andrija.homesiloserver.folder.dto.FolderResponse;
+import com.andrija.homesiloserver.folder.dto.FolderSummaryResponse;
 import com.andrija.homesiloserver.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -71,6 +72,20 @@ public class FolderService {
     }
 
     // ── Queries ──────────────────────────────────────────────────────────────
+
+    /**
+     * Counts everything below the folder, at any depth. For a folder in the trash,
+     * that is the trashed folders and files in it.
+     */
+    public FolderSummaryResponse summary(UUID folderId, UUID ownerId) {
+        Folder folder = getOwned(folderId, ownerId);
+        List<UUID> descendants = collectDescendantIds(folderId, ownerId, folder.isTrashed());
+        List<UUID> all = new ArrayList<>(descendants);
+        all.add(folderId);
+        FileMetadataRepository.FolderUsage usage =
+                fileMetadataRepository.usageInFolders(ownerId, all, folder.isTrashed());
+        return new FolderSummaryResponse(descendants.size(), usage.getFiles(), usage.getBytes());
+    }
 
     public FolderResponse getFolder(UUID folderId, UUID ownerId) {
         return FolderResponse.from(getOwned(folderId, ownerId));

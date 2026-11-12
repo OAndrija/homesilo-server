@@ -15,6 +15,36 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class FolderFlowIntegrationTest extends IntegrationTest {
 
     @Test
+    void summaryCountsEverythingInsideAtAnyDepth() throws Exception {
+        Session session = register();
+        String trip = createFolder(session, "Trip", null);
+        String day1 = createFolder(session, "Day 1", trip);
+        createFolder(session, "Empty", day1);
+        upload(session, "plan.txt", "12345", trip);
+        upload(session, "photo.txt", "1234567890", day1);
+        String gone = upload(session, "gone.txt", "123", day1);
+        trashFile(session, gone);
+
+        mvc.perform(get("/api/v1/folders/{id}/summary", trip).cookie(session.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.folders").value(2))
+                .andExpect(jsonPath("$.files").value(2))
+                .andExpect(jsonPath("$.bytes").value(15));
+
+        // A folder in the trash counts the trashed things in it, including a file
+        // that was trashed on its own earlier.
+        trashFolder(session, day1);
+        mvc.perform(get("/api/v1/folders/{id}/summary", day1).cookie(session.cookie()))
+                .andExpect(jsonPath("$.folders").value(1))
+                .andExpect(jsonPath("$.files").value(2))
+                .andExpect(jsonPath("$.bytes").value(13));
+
+        // Someone else's folder doesn't exist for you.
+        mvc.perform(get("/api/v1/folders/{id}/summary", trip).cookie(register().cookie()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void contentsIncludeBreadcrumbSubfoldersAndFiles() throws Exception {
         Session session = register();
         String root = createFolder(session, "Projects", null);

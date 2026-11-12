@@ -149,6 +149,20 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
             @Param("ownerId") UUID ownerId,
             @Param("folderIds") Collection<UUID> folderIds);
 
+    /** How many files the folders hold between them, and their total size. */
+    @Query("SELECT COUNT(f) AS files, COALESCE(SUM(f.size), 0) AS bytes FROM FileMetadata f " +
+            "WHERE f.owner.id = :ownerId AND f.folder.id IN :folderIds AND f.trashed = :trashed")
+    FolderUsage usageInFolders(
+            @Param("ownerId") UUID ownerId,
+            @Param("folderIds") Collection<UUID> folderIds,
+            @Param("trashed") boolean trashed);
+
+    interface FolderUsage {
+        long getFiles();
+
+        long getBytes();
+    }
+
     // ── Permanent deletion ───────────────────────────────────────────────────
 
     @Query("SELECT DISTINCT f.storedFileName FROM FileMetadata f " +
