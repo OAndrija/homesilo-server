@@ -75,6 +75,8 @@ class AdminFlowIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.users").isNumber())
                 .andExpect(jsonPath("$.admins").isNumber())
                 .andExpect(jsonPath("$.defaultQuotaBytes").isNumber())
+                .andExpect(jsonPath("$.topUsers").isArray())
+                .andExpect(jsonPath("$.topUsers.length()").value(org.hamcrest.Matchers.lessThanOrEqualTo(5)))
                 .andExpect(result -> assertThat(read(result, "$.storageUsedBytes")).isNotEqualTo("0"));
     }
 

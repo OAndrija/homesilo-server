@@ -93,6 +93,19 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f")
     long sumAllSizes();
 
+    /** Accounts using the most storage (trash included), largest first. */
+    @Query("SELECT f.owner.id AS ownerId, f.owner.username AS username, SUM(f.size) AS bytes "
+            + "FROM FileMetadata f GROUP BY f.owner.id, f.owner.username ORDER BY SUM(f.size) DESC")
+    List<TopUsage> topUsage(Pageable pageable);
+
+    interface TopUsage {
+        UUID getOwnerId();
+
+        String getUsername();
+
+        long getBytes();
+    }
+
     long countByTrashedFalse();
 
     @Query("SELECT DISTINCT f.storedFileName FROM FileMetadata f WHERE f.owner.id = :ownerId")

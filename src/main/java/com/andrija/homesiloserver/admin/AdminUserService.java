@@ -21,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -67,7 +68,10 @@ public class AdminUserService {
                 userRepository.sumStorageQuotaBytes(),
                 fileRepository.countByTrashedFalse(),
                 properties.storage().defaultQuota().toBytes(),
-                properties.auth().registrationEnabled());
+                properties.auth().registrationEnabled(),
+                fileRepository.topUsage(PageRequest.of(0, 5)).stream()
+                        .map(u -> new AdminOverviewResponse.StorageByUser(u.getOwnerId(), u.getUsername(), u.getBytes()))
+                        .toList());
     }
 
     public PageResponse<AdminUserResponse> list(String query, UserRole role, AccountStatus status, Pageable pageable) {

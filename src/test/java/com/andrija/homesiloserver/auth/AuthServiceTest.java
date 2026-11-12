@@ -6,6 +6,7 @@ import com.andrija.homesiloserver.common.exception.ForbiddenException;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
 import com.andrija.homesiloserver.user.UserRole;
+import com.andrija.homesiloserver.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,7 +34,7 @@ class AuthServiceTest {
                 new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1)),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
                 new HomesiloProperties.Cors(List.of()));
-        return new AuthService(mock(AuthenticationManager.class), users, encoder,
+        return new AuthService(mock(AuthenticationManager.class), users, new UserService(users, encoder),
                 new LoginAttemptService(properties), properties);
     }
 
@@ -50,6 +51,7 @@ class AuthServiceTest {
         assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
         assertThat(user.getEmail()).isEqualTo("alice@example.com");
         assertThat(user.getStorageQuotaBytes()).isEqualTo(DataSize.ofGigabytes(1).toBytes());
+        assertThat(user.getLastLoginAt()).as("signing up signs you in").isNotNull();
     }
 
     @Test
