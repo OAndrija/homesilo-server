@@ -8,7 +8,7 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.RequestBuilder;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
 
 import java.nio.charset.StandardCharsets;
@@ -125,7 +125,7 @@ public class World {
     // ── Requests ─────────────────────────────────────────────────────────────
 
     /** Sends the request as me, with the CSRF token the browser app would send. */
-    MockHttpServletRequestBuilder asMe(MockHttpServletRequestBuilder request) {
+    <B extends AbstractMockHttpServletRequestBuilder<B>> B asMe(B request) {
         return request.cookie(me().cookie()).with(csrf());
     }
 
