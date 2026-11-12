@@ -50,7 +50,8 @@ public class DashboardService {
                 fileRepository.countByOwnerIdAndTrashedFalse(ownerId),
                 folderRepository.countByOwnerIdAndTrashedFalse(ownerId),
                 fileRepository.countByOwnerIdAndTrashedFalseAndUploadedAtAfter(ownerId, LocalDateTime.now().minusDays(7)),
-                fileRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(ownerId),
+                fileRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(ownerId)
+                        + folderRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(ownerId),
                 properties.trash().retentionDays(),
                 breakdown(ownerId, trashed),
                 recentlyTrashed

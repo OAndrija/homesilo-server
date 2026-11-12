@@ -74,6 +74,35 @@ class FolderFlowIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void starredFoldersAreListedAndCountedUntilTrashed() throws Exception {
+        Session session = register();
+        String music = createFolder(session, "Music", null);
+        String photos = createFolder(session, "Photos", null);
+
+        mvc.perform(patch("/api/v1/folders/{id}/star", music).cookie(session.cookie()).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.starred").value(true));
+        mvc.perform(get("/api/v1/folders/starred").cookie(session.cookie()))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(music));
+        mvc.perform(get("/api/v1/folders/starred").param("query", "phot").cookie(session.cookie()))
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get("/api/v1/dashboard/stats").cookie(session.cookie()))
+                .andExpect(jsonPath("$.starredCount").value(1));
+
+        trashFolder(session, music);
+        mvc.perform(get("/api/v1/folders/starred").cookie(session.cookie()))
+                .andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(patch("/api/v1/folders/{id}/star", music).cookie(session.cookie()).with(csrf()))
+                .andExpect(status().isConflict());
+
+        // Another user can't star someone else's folder.
+        Session other = register();
+        mvc.perform(patch("/api/v1/folders/{id}/star", photos).cookie(other.cookie()).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void trashCascadesAndTrashViewShowsOnlyTheTopLevelItem() throws Exception {
         Session session = register();
         String top = createFolder(session, "Archive", null);
