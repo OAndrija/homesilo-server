@@ -120,11 +120,15 @@ class ThumbnailServiceTest {
     }
 
     @Test
-    void filesThatArentImagesHaveNone() {
-        StoredBlob text = store("just text".getBytes(StandardCharsets.UTF_8));
-        assertThat(thumbnails.get(owner, text.hash(), "text/plain", text.size())).isEmpty();
+    void filesThatCantBeReadHaveNoneAndArentTriedAgain() throws Exception {
+        StoredBlob notAnImage = store("just text".getBytes(StandardCharsets.UTF_8));
         // Claims to be an image but isn't one.
-        assertThat(thumbnails.get(owner, text.hash(), "image/png", text.size())).isEmpty();
+        assertThat(thumbnails.get(owner, notAnImage.hash(), "image/png", notAnImage.size())).isEmpty();
+        Path marker = dir.resolve("thumbs").resolve(owner.toString()).resolve(notAnImage.hash() + ".none");
+        assertThat(marker).exists();
+        assertThat(thumbnails.get(owner, notAnImage.hash(), "image/png", notAnImage.size())).isEmpty();
+
+        assertThat(thumbnails.get(owner, notAnImage.hash(), "application/zip", notAnImage.size())).isEmpty();
     }
 
     @ParameterizedTest
@@ -133,7 +137,14 @@ class ThumbnailServiceTest {
             "IMAGE/PNG, 1000, true",
             "image/webp, 1000, true",
             "image/svg+xml, 1000, false",
-            "application/pdf, 1000, false",
+            "application/pdf, 1000, true",
+            "text/markdown, 1000, true",
+            "text/plain; charset=UTF-8, 100000000, true",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document, 1000, true",
+            "application/vnd.oasis.opendocument.spreadsheet, 1000, true",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, 1000, false",
+            "application/zip, 1000, false",
+            "video/mp4, 1000, false",
             "image/jpeg, 0, false",
             "image/jpeg, 100000000, false"
     })

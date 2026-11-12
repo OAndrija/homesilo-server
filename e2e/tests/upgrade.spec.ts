@@ -141,6 +141,16 @@ test('previews are served with the right type and a sandboxing CSP', async ({ pa
   expect(image.headers()['content-security-policy']).toContain('sandbox');
 });
 
+test('the server image draws document thumbnails (fonts are installed)', async ({ page }) => {
+  await signIn(page, ALICE.username, ALICE.password);
+  const metadata = await (await page.request.get(`/api/v1/files/${seed.files.notes}/metadata`)).json();
+  expect(metadata.thumbnail).toBe(true);
+  const thumbnail = await page.request.get(`/api/v1/files/${seed.files.notes}/thumbnail`);
+  expect(thumbnail.status()).toBe(200);
+  expect(thumbnail.headers()['content-type']).toBe('image/jpeg');
+  expect((await thumbnail.body()).length).toBeGreaterThan(1000);
+});
+
 test('state-changing requests without the CSRF header are rejected', async ({ page }) => {
   await signIn(page, ALICE.username, ALICE.password);
   const response = await page.request.post('/api/v1/folders', { data: { name: 'csrf-probe' } });
