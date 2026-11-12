@@ -32,6 +32,9 @@ function row(page: Page, name: string) {
 async function accountMenu(page: Page, item: 'Settings' | 'Manage users' | 'Sign out') {
   await page.click('button.account-trigger');
   await page.getByRole('menuitem', { name: item }).click();
+  // Signing out ends the session on the server first; wait for that, or the next
+  // page load would start while the old session is still valid.
+  if (item === 'Sign out') await page.waitForURL(/\/login/);
 }
 
 test('security headers are served by nginx', async ({ request }) => {
