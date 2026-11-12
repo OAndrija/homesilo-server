@@ -5,6 +5,7 @@ import com.andrija.homesiloserver.common.web.RenameRequest;
 import com.andrija.homesiloserver.folder.dto.CreateFolderRequest;
 import com.andrija.homesiloserver.folder.dto.FolderContentsResponse;
 import com.andrija.homesiloserver.folder.dto.FolderResponse;
+import com.andrija.homesiloserver.folder.dto.FolderSummaryResponse;
 import com.andrija.homesiloserver.folder.dto.MoveFolderRequest;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.trash.TrashService;
@@ -87,6 +88,15 @@ public class FolderController {
             @AuthenticationPrincipal ServerUserDetails principal
     ) {
         return folderService.getFolder(folderId, principal.getId());
+    }
+
+    /** How many folders and files are inside, at any depth, and how much space they take. */
+    @GetMapping("/{folderId}/summary")
+    public FolderSummaryResponse getFolderSummary(
+            @PathVariable UUID folderId,
+            @AuthenticationPrincipal ServerUserDetails principal
+    ) {
+        return folderService.summary(folderId, principal.getId());
     }
 
     /** Direct subfolders plus a page of the folder's files, with the breadcrumb trail. */
