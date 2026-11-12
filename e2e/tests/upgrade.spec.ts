@@ -269,6 +269,12 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.keyboard.press('Shift+ArrowLeft');
   await page.locator('[data-tile="activity"]').focus();
   await page.keyboard.press('Home');
+  // A click on a tile shows the sizes it can take.
+  await page.locator('[data-tile="starred-count"]').evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await page.locator('[data-tile="starred-count"]').click();
+  await page.getByRole('radiogroup', { name: 'Size of Starred' }).getByRole('radio', { name: /^Tall/ }).click();
+  await expect(page.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
+  await page.keyboard.press('Escape');
   // Mouse: carry Total files onto Storage's place, once the tiles have slid into place.
   await page.locator('[data-tile]').evaluateAll((els) =>
     // A slide cut short by the next change is cancelled, which rejects `finished`.
@@ -294,6 +300,7 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await signIn(other, 'new-carol', 'carols-password');
   await expect(other.locator('[data-tile]').first()).toHaveAttribute('data-tile', 'activity');
   await expect(other.locator('[data-tile="storage"]')).toHaveAttribute('data-size', 'medium');
+  await expect(other.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
   await other.close();
 
   // Reset goes back to the default and forgets the saved layout.
