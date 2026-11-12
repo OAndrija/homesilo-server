@@ -264,14 +264,25 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.getByRole('button', { name: 'Edit dashboard' }).click();
   await page.getByRole('button', { name: 'Remove Largest file type' }).click();
   await page.locator('.add-card', { hasText: 'Recent activity' }).click();
-  await page.getByRole('radiogroup', { name: 'Size of Storage' }).getByRole('radio', { name: 'Medium' }).click();
-  // Keyboard reordering: Recent activity to the front.
-  await page.locator('[data-tile="activity"] .tile-handle').focus();
+  // Keyboard: Shift+Left makes Storage smaller, Home moves Recent activity to the front.
+  await page.locator('[data-tile="storage"]').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await page.locator('[data-tile="activity"]').focus();
   await page.keyboard.press('Home');
+  // Mouse: carry Total files onto Storage's place, once the tiles have slid into place.
+  await page.locator('[data-tile]').evaluateAll((els) =>
+    Promise.all(els.flatMap((e) => e.getAnimations().map((a) => a.finished))));
+  const from = (await page.locator('[data-tile="total-files"]').boundingBox())!;
+  const to = (await page.locator('[data-tile="storage"]').boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + 40, to.y + 40, { steps: 20 });
+  await expect(page.locator('[data-tile="total-files"]')).toHaveClass(/lifted/);
+  await page.mouse.up();
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByText('Dashboard saved')).toBeVisible();
 
-  const expected = ['activity', 'storage', 'total-files', 'added-week', 'starred-count', 'starred-files', 'folders', 'recent'];
+  const expected = ['activity', 'total-files', 'storage', 'added-week', 'starred-count', 'starred-files', 'folders', 'recent'];
   expect(await tiles()).toEqual(expected);
   await expect(page.locator('[data-tile="activity"]')).toContainText('You created an account');
 
