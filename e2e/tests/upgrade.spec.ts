@@ -286,9 +286,12 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.getByRole('button', { name: 'Edit dashboard' }).click();
   await page.getByRole('button', { name: /^Reset/ }).click();
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect.poll(tiles).toEqual([
+  // Edit mode closes once the server has the change.
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  expect(await tiles()).toEqual([
     'storage', 'total-files', 'added-week', 'starred-count', 'largest-type', 'starred-files', 'folders', 'recent',
   ]);
-  const saved = await (await page.request.get('/api/v1/dashboard/layout')).json();
-  expect(saved.customized).toBe(false);
+  await expect
+    .poll(async () => (await (await page.request.get('/api/v1/dashboard/layout')).json()).customized)
+    .toBe(false);
 });
