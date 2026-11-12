@@ -32,7 +32,7 @@ class AuthServiceTest {
         HomesiloProperties properties = new HomesiloProperties(
                 new HomesiloProperties.Jwt("x".repeat(32), Duration.ofHours(1)),
                 new HomesiloProperties.Auth("homesilo_session", false, registrationEnabled, 5, Duration.ofMinutes(15)),
-                new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1)),
+                new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1), "target/unused-thumbnails"),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
                 new HomesiloProperties.Cors(List.of()),
                 new HomesiloProperties.Activity(90));

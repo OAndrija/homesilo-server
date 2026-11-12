@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.file;
 
+import com.andrija.homesiloserver.common.exception.NotFoundException;
 import com.andrija.homesiloserver.common.web.PageResponse;
 import com.andrija.homesiloserver.common.web.RenameRequest;
 import com.andrija.homesiloserver.file.ArchiveService.ArchivePlan;
@@ -7,14 +8,17 @@ import com.andrija.homesiloserver.file.FileService.FileContent;
 import com.andrija.homesiloserver.file.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.file.dto.MoveFileRequest;
 import com.andrija.homesiloserver.security.ServerUserDetails;
+import com.andrija.homesiloserver.thumbnail.ThumbnailService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -35,6 +39,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
@@ -53,6 +58,7 @@ public class FileController {
 
     private final FileService fileService;
     private final ArchiveService archiveService;
+    private final ThumbnailService thumbnailService;
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FileMetadataResponse> uploadFile(
@@ -185,6 +191,28 @@ public class FileController {
             response.header("Content-Security-Policy", "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'");
         }
         return response.body(content.resource());
+    }
+
+    /**
+     * A small preview of an image (at most {@value ThumbnailService#SIZE}px on its longest
+     * edge), made on first request and cached. 404 when there is none; the file's
+     * {@code thumbnail} flag says in advance. A file's bytes never change, so browsers
+     * may keep it for a month.
+     */
+    @GetMapping("/{fileId}/thumbnail")
+    public ResponseEntity<Resource> thumbnail(
+            @PathVariable UUID fileId,
+            @AuthenticationPrincipal ServerUserDetails principal
+    ) {
+        FileService.ThumbnailSource source = fileService.getThumbnailSource(fileId, principal.getId());
+        return thumbnailService.get(source.ownerId(), source.hash(), source.contentType(), source.size())
+                .<ResponseEntity<Resource>>map(thumb -> ResponseEntity.ok()
+                        .contentType(thumb.type())
+                        .cacheControl(CacheControl.maxAge(Duration.ofDays(30)).cachePrivate())
+                        .eTag(source.hash())
+                        .header("Content-Security-Policy", "sandbox; default-src 'none'")
+                        .body(new FileSystemResource(thumb.path())))
+                .orElseThrow(() -> new NotFoundException("No preview for this file"));
     }
 
     /** Streams a zip of the selected files and folders (folders are included recursively). */

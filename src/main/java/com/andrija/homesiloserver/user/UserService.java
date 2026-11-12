@@ -1,7 +1,7 @@
 package com.andrija.homesiloserver.user;
 
-import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.ActivityAction;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.common.exception.BadRequestException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;

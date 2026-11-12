@@ -1,13 +1,12 @@
 package com.andrija.homesiloserver.auth;
 
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import com.andrija.homesiloserver.security.ServerUserDetails;
-import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.ActivityAction;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.AuthConfigResponse;
 import com.andrija.homesiloserver.auth.dto.AuthResponse;
 import com.andrija.homesiloserver.auth.dto.LoginRequest;
 import com.andrija.homesiloserver.auth.dto.RegisterRequest;
+import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.dto.UserResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

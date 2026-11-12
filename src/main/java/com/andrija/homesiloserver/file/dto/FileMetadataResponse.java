@@ -2,6 +2,7 @@ package com.andrija.homesiloserver.file.dto;
 
 import com.andrija.homesiloserver.file.FileMetadata;
 import com.andrija.homesiloserver.folder.Folder;
+import com.andrija.homesiloserver.thumbnail.ThumbnailService;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -17,7 +18,9 @@ public record FileMetadataResponse(
         LocalDateTime lastModified,
         LocalDateTime trashedAt,
         UUID folderId,
-        String folderName
+        String folderName,
+        /* HomeSilo can show a small preview of it (GET /files/{id}/thumbnail). */
+        boolean thumbnail
 ) {
     public static FileMetadataResponse from(FileMetadata file) {
         Folder folder = file.getFolder();
@@ -32,7 +35,8 @@ public record FileMetadataResponse(
                 file.getLastModified(),
                 file.getTrashedAt(),
                 folder != null ? folder.getId() : null,
-                folder != null ? folder.getName() : null
+                folder != null ? folder.getName() : null,
+                ThumbnailService.canMake(file.getContentType(), file.getSize())
         );
     }
 }

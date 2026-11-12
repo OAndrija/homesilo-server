@@ -1,6 +1,7 @@
 package com.andrija.homesiloserver.storage;
 
 import com.andrija.homesiloserver.file.FileMetadataRepository;
+import com.andrija.homesiloserver.thumbnail.ThumbnailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -25,6 +26,7 @@ public class BlobGarbageCollector {
 
     private final BlobStorage blobStorage;
     private final FileMetadataRepository fileMetadataRepository;
+    private final ThumbnailService thumbnails;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onBlobsReleased(BlobsReleasedEvent event) {
@@ -32,6 +34,7 @@ public class BlobGarbageCollector {
             try {
                 if (!fileMetadataRepository.existsByOwnerIdAndStoredFileName(event.ownerId(), hash)) {
                     blobStorage.deleteIfIdle(event.ownerId(), hash, UPLOAD_GRACE);
+                    thumbnails.evict(event.ownerId(), hash);
                 }
             } catch (RuntimeException ex) {
                 log.warn("Could not delete blob {} for owner {}; the nightly sweep will retry",
@@ -44,6 +47,10 @@ public class BlobGarbageCollector {
         int removed = blobStorage.sweepOrphans(fileMetadataRepository::existsByOwnerIdAndStoredFileName, minAge);
         if (removed > 0) {
             log.info("Orphan sweep removed {} unreferenced blob(s)", removed);
+        }
+        int thumbs = thumbnails.sweep(fileMetadataRepository::existsByOwnerIdAndStoredFileName);
+        if (thumbs > 0) {
+            log.info("Orphan sweep removed {} stale thumbnail(s)", thumbs);
         }
         return removed;
     }

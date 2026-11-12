@@ -1,8 +1,8 @@
 package com.andrija.homesiloserver.trash;
 
-import com.andrija.homesiloserver.activity.TargetType;
-import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.ActivityAction;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.TargetType;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.file.FileMetadata;

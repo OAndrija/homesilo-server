@@ -1,9 +1,11 @@
 package com.andrija.homesiloserver.file;
 
 import com.andrija.homesiloserver.support.IntegrationTest;
+import com.andrija.homesiloserver.support.TestImages;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.io.ByteArrayInputStream;
@@ -20,6 +22,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -99,6 +102,39 @@ class FileFlowIntegrationTest extends IntegrationTest {
 
         mvc.perform(get("/api/v1/files/{id}/download", id).cookie(bob.cookie())).andExpect(status().isNotFound());
         mvc.perform(patch("/api/v1/files/{id}/trash", id).cookie(bob.cookie()).with(csrf()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void imagesGetACachedThumbnailAndOtherFilesDont() throws Exception {
+        Session session = register();
+        MvcResult uploaded = mvc.perform(multipart("/api/v1/files/upload")
+                        .file(new MockMultipartFile("file", "beach.png", "image/png",
+                                TestImages.png(TestImages.halves(1200, 600, false))))
+                        .cookie(session.cookie()).with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.thumbnail").value(true))
+                .andReturn();
+        String image = read(uploaded, "$.id");
+        String text = upload(session, "notes.txt", "hello", null);
+
+        MvcResult thumb = mvc.perform(get("/api/v1/files/{id}/thumbnail", image).cookie(session.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/jpeg"))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("max-age")))
+                .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("private")))
+                .andReturn();
+        var decoded = javax.imageio.ImageIO.read(new ByteArrayInputStream(thumb.getResponse().getContentAsByteArray()));
+        assertThat(decoded.getWidth()).isEqualTo(480);
+        assertThat(decoded.getHeight()).isEqualTo(240);
+
+        mvc.perform(get("/api/v1/files/{id}/metadata", text).cookie(session.cookie()))
+                .andExpect(jsonPath("$.thumbnail").value(false));
+        mvc.perform(get("/api/v1/files/{id}/thumbnail", text).cookie(session.cookie()))
+                .andExpect(status().isNotFound());
+
+        Session stranger = register();
+        mvc.perform(get("/api/v1/files/{id}/thumbnail", image).cookie(stranger.cookie()))
                 .andExpect(status().isNotFound());
     }
 

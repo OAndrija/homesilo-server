@@ -43,8 +43,11 @@ services:
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-30}
       ACTIVITY_RETENTION_DAYS: ${ACTIVITY_RETENTION_DAYS:-90}
       STORAGE_BASE_PATH: /data/storage
+      THUMBNAIL_PATH: /data/thumbnails
     volumes:
       - storage:/data/storage
+      # A cache of image previews; deleting it is safe, they are made again.
+      - thumbnails:/data/thumbnails
 
   client:
     build: ../homesilo-client
@@ -61,3 +64,4 @@ services:
 volumes:
   db-data:
   storage:
+  thumbnails:
