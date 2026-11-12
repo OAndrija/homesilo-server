@@ -10,15 +10,15 @@ Feature: Dashboard layout
 
   Scenario: My tiles are kept in the order and size I chose
     When I arrange my dashboard as:
-      | tile        | size  |
-      | recent      | wide  |
-      | storage     | small |
-      | total-files | small |
+      | tile        | size      |
+      | recent      | wide-tall |
+      | storage     | tall      |
+      | total-files | large     |
     Then my dashboard shows:
-      | tile        | size  |
-      | recent      | wide  |
-      | storage     | small |
-      | total-files | small |
+      | tile        | size      |
+      | recent      | wide-tall |
+      | storage     | tall      |
+      | total-files | large     |
 
   Scenario: Someone else's dashboard is not affected
     When I arrange my dashboard as:

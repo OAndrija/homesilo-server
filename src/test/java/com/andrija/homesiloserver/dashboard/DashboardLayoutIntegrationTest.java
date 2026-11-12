@@ -56,6 +56,17 @@ class DashboardLayoutIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void everyGridSizeIsAccepted() throws Exception {
+        Session user = register();
+        save(user, """
+                {"tiles":[{"id":"a","size":"small"},{"id":"b","size":"tall"},{"id":"c","size":"medium"},
+                          {"id":"d","size":"large"},{"id":"e","size":"wide"},{"id":"f","size":"wide-tall"}]}
+                """).andExpect(status().isOk());
+        assertThat(JsonPath.<List<String>>read(layout(user), "$.tiles[*].size"))
+                .containsExactly("small", "tall", "medium", "large", "wide", "wide-tall");
+    }
+
+    @Test
     void eachPersonHasTheirOwnLayout() throws Exception {
         Session ana = register();
         Session ben = register();
@@ -68,7 +79,7 @@ class DashboardLayoutIntegrationTest extends IntegrationTest {
         Session user = register();
         save(user, "{\"tiles\":[{\"id\":\"storage\",\"size\":\"huge\"}]}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Size must be small, medium, large or wide"));
+                .andExpect(jsonPath("$.detail").value("Size must be small, tall, medium, large, wide or wide-tall"));
         save(user, "{\"tiles\":[{\"id\":\"Storage!\",\"size\":\"small\"}]}")
                 .andExpect(status().isBadRequest());
         save(user, "{\"tiles\":[{\"id\":\"storage\",\"size\":\"small\"},{\"id\":\"storage\",\"size\":\"wide\"}]}")

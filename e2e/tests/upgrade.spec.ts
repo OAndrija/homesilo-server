@@ -32,6 +32,9 @@ function row(page: Page, name: string) {
 async function accountMenu(page: Page, item: 'Settings' | 'Manage users' | 'Sign out') {
   await page.click('button.account-trigger');
   await page.getByRole('menuitem', { name: item }).click();
+  // Signing out ends the session on the server first; wait for that, or the next
+  // page load would start while the old session is still valid.
+  if (item === 'Sign out') await page.waitForURL(/\/login/);
 }
 
 test('security headers are served by nginx', async ({ request }) => {
@@ -269,14 +272,21 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.keyboard.press('Shift+ArrowLeft');
   await page.locator('[data-tile="activity"]').focus();
   await page.keyboard.press('Home');
-  // Mouse: carry Total files onto Storage's place, once the tiles have slid into place.
+  // A click on a tile shows the sizes it can take.
+  await page.locator('[data-tile="starred-count"]').evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await page.locator('[data-tile="starred-count"]').click();
+  await page.getByRole('radiogroup', { name: 'Size of Starred' }).getByRole('radio', { name: /^Tall/ }).click();
+  await expect(page.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
+  await page.keyboard.press('Escape');
+  // Mouse: carry Total files sideways onto its neighbour, once the tiles have slid into place.
+  // (A path across other tiles would swap with those too, as it should.)
   await page.locator('[data-tile]').evaluateAll((els) =>
     // A slide cut short by the next change is cancelled, which rejects `finished`.
     Promise.all(els.flatMap((e) => e.getAnimations().map((a) => a.finished.catch(() => null)))));
   // Adding a tile scrolled the page; bring both into view, clear of the sticky header.
   await page.locator('[data-tile="total-files"]').evaluate((e) => e.scrollIntoView({ block: 'center' }));
   const from = (await page.locator('[data-tile="total-files"]').boundingBox())!;
-  const to = (await page.locator('[data-tile="storage"]').boundingBox())!;
+  const to = (await page.locator('[data-tile="added-week"]').boundingBox())!;
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 20 });
@@ -285,7 +295,7 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByText('Dashboard saved')).toBeVisible();
 
-  const expected = ['activity', 'total-files', 'storage', 'added-week', 'starred-count', 'starred-files', 'folders', 'recent'];
+  const expected = ['activity', 'storage', 'added-week', 'total-files', 'starred-count', 'starred-files', 'folders', 'recent'];
   expect(await tiles()).toEqual(expected);
   await expect(page.locator('[data-tile="activity"]')).toContainText('You created an account');
 
@@ -294,6 +304,7 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await signIn(other, 'new-carol', 'carols-password');
   await expect(other.locator('[data-tile]').first()).toHaveAttribute('data-tile', 'activity');
   await expect(other.locator('[data-tile="storage"]')).toHaveAttribute('data-size', 'medium');
+  await expect(other.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
   await other.close();
 
   // Reset goes back to the default and forgets the saved layout.

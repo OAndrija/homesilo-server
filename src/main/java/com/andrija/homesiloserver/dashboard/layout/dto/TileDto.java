@@ -5,7 +5,8 @@ import jakarta.validation.constraints.Pattern;
 
 /**
  * A tile as the app sends it. The server doesn't know the app's tiles, so it only
- * checks the id's shape; sizes are the four the dashboard grid has.
+ * checks the id's shape; sizes are the ones the dashboard grid has (columns × rows):
+ * small 1×1, tall 1×2, medium 2×1, large 2×2, wide (full width) and wide-tall (full width, two rows).
  */
 public record TileDto(
         @NotNull(message = "Each tile needs an id")
@@ -13,7 +14,8 @@ public record TileDto(
         String id,
 
         @NotNull(message = "Each tile needs a size")
-        @Pattern(regexp = "small|medium|large|wide", message = "Size must be small, medium, large or wide")
+        @Pattern(regexp = "small|tall|medium|large|wide|wide-tall",
+                message = "Size must be small, tall, medium, large, wide or wide-tall")
         String size
 ) {
 }
