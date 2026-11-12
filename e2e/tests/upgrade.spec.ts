@@ -253,3 +253,45 @@ test('a new user can register and only sees their own files', async ({ page }) =
   await accountMenu(page, 'Settings');
   await expect(page.getByText('User', { exact: true })).toBeVisible();
 });
+
+test('the dashboard can be rearranged and keeps its tiles after signing in again', async ({ page, browser }) => {
+  await signIn(page, 'new-carol', 'carols-password');
+  const tiles = () => page.locator('[data-tile]').evaluateAll((els) => els.map((e) => (e as HTMLElement).dataset['tile']));
+  await expect.poll(tiles).toEqual([
+    'storage', 'total-files', 'added-week', 'starred-count', 'largest-type', 'starred-files', 'folders', 'recent',
+  ]);
+
+  await page.getByRole('button', { name: 'Edit dashboard' }).click();
+  await page.getByRole('button', { name: 'Remove Largest file type' }).click();
+  await page.locator('.add-card', { hasText: 'Recent activity' }).click();
+  await page.getByRole('radiogroup', { name: 'Size of Storage' }).getByRole('radio', { name: 'Medium' }).click();
+  // Keyboard reordering: Recent activity to the front.
+  await page.locator('[data-tile="activity"] .tile-handle').focus();
+  await page.keyboard.press('Home');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByText('Dashboard saved')).toBeVisible();
+
+  const expected = ['activity', 'storage', 'total-files', 'added-week', 'starred-count', 'starred-files', 'folders', 'recent'];
+  expect(await tiles()).toEqual(expected);
+  await expect(page.locator('[data-tile="activity"]')).toContainText('You created an account');
+
+  // A fresh browser (no local copy) gets the same layout from the server.
+  const other = await browser.newPage();
+  await signIn(other, 'new-carol', 'carols-password');
+  await expect(other.locator('[data-tile]').first()).toHaveAttribute('data-tile', 'activity');
+  await expect(other.locator('[data-tile="storage"]')).toHaveAttribute('data-size', 'medium');
+  await other.close();
+
+  // Reset goes back to the default and forgets the saved layout.
+  await page.getByRole('button', { name: 'Edit dashboard' }).click();
+  await page.getByRole('button', { name: /^Reset/ }).click();
+  await page.getByRole('button', { name: 'Done' }).click();
+  // Edit mode closes once the server has the change.
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();
+  expect(await tiles()).toEqual([
+    'storage', 'total-files', 'added-week', 'starred-count', 'largest-type', 'starred-files', 'folders', 'recent',
+  ]);
+  await expect
+    .poll(async () => (await (await page.request.get('/api/v1/dashboard/layout')).json()).customized)
+    .toBe(false);
+});
