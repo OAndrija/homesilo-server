@@ -24,6 +24,10 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
 
     Page<FileMetadata> findByOwnerIdAndStarredTrueAndTrashedFalse(UUID ownerId, Pageable pageable);
 
+    /** Active files whose type starts with the prefix, e.g. {@code image/} for photos. */
+    Page<FileMetadata> findByOwnerIdAndTrashedFalseAndContentTypeStartingWith(
+            UUID ownerId, String contentTypePrefix, Pageable pageable);
+
     Page<FileMetadata> findByOwnerIdAndFolderIdAndTrashedFalse(UUID ownerId, UUID folderId, Pageable pageable);
 
     Page<FileMetadata> findByOwnerIdAndFolderIsNullAndTrashedFalse(UUID ownerId, Pageable pageable);

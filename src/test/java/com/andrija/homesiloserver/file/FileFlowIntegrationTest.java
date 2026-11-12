@@ -106,6 +106,34 @@ class FileFlowIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void photosListsOnlyActivePicturesNewestFirstFromEveryFolder() throws Exception {
+        Session session = register();
+        String folder = createFolder(session, "Trip", null);
+        String first = uploadImage(session, "first.png", null);
+        upload(session, "notes.txt", "not a picture", null);
+        String second = uploadImage(session, "second.png", folder);
+        String trashed = uploadImage(session, "gone.png", null);
+        trashFile(session, trashed);
+
+        mvc.perform(get("/api/v1/files/photos").cookie(session.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[*].id").value(org.hamcrest.Matchers.contains(second, first)))
+                .andExpect(jsonPath("$.content[0].contentType").value("image/png"));
+
+        // Someone else sees none of them.
+        mvc.perform(get("/api/v1/files/photos").cookie(register().cookie()))
+                .andExpect(jsonPath("$.content").isEmpty());
+    }
+
+    private String uploadImage(Session session, String name, String folderId) throws Exception {
+        var request = multipart("/api/v1/files/upload")
+                .file(new MockMultipartFile("file", name, "image/png", TestImages.png(TestImages.halves(64, 48, false))));
+        if (folderId != null) request.param("folderId", folderId);
+        return read(mvc.perform(request.cookie(session.cookie()).with(csrf()))
+                .andExpect(status().isCreated()).andReturn(), "$.id");
+    }
+
+    @Test
     void imagesGetACachedThumbnailAndOtherFilesDont() throws Exception {
         Session session = register();
         MvcResult uploaded = mvc.perform(multipart("/api/v1/files/upload")
