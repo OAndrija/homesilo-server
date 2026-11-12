@@ -1,5 +1,7 @@
 package com.andrija.homesiloserver.user;
 
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.common.exception.BadRequestException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;
@@ -23,6 +25,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ActivityRecorder activity;
 
     public User getEntity(UUID id) {
         return userRepository.findById(id)
@@ -69,6 +72,7 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setPasswordChangedAt(LocalDateTime.now());
         log.info("User '{}' changed their password", userId);
+        activity.recordAs(user, ActivityAction.PASSWORD_CHANGED);
         return user;
     }
 }

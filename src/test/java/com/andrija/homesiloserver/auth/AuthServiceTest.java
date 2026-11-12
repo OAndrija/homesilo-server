@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.auth;
 
+import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.RegisterRequest;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ForbiddenException;
@@ -33,9 +34,11 @@ class AuthServiceTest {
                 new HomesiloProperties.Auth("homesilo_session", false, registrationEnabled, 5, Duration.ofMinutes(15)),
                 new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1)),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
-                new HomesiloProperties.Cors(List.of()));
-        return new AuthService(mock(AuthenticationManager.class), users, new UserService(users, encoder),
-                new LoginAttemptService(properties), properties);
+                new HomesiloProperties.Cors(List.of()),
+                new HomesiloProperties.Activity(90));
+        ActivityRecorder activity = mock(ActivityRecorder.class);
+        return new AuthService(mock(AuthenticationManager.class), users, new UserService(users, encoder, activity),
+                new LoginAttemptService(properties), properties, activity);
     }
 
     private static final RegisterRequest REQUEST = new RegisterRequest("alice", " Alice@Example.COM ", "password123");

@@ -1,5 +1,8 @@
 package com.andrija.homesiloserver.trash;
 
+import com.andrija.homesiloserver.activity.TargetType;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.file.FileMetadata;
@@ -38,6 +41,7 @@ public class TrashService {
     private final FileMetadataRepository fileRepository;
     private final ApplicationEventPublisher events;
     private final HomesiloProperties properties;
+    private final ActivityRecorder activity;
 
     /** Deletes a trashed folder and everything under it. */
     @Transactional
@@ -48,9 +52,12 @@ public class TrashService {
         }
         List<UUID> ids = new ArrayList<>(folderService.collectDescendantIds(folderId, ownerId, true));
         ids.add(folderId);
+        String name = folder.getName();
         PurgeResult result = purgeFolders(ownerId, ids, new HashSet<>());
         log.info("Permanently deleted folder {} ({} folder(s), {} file(s)) for user {}",
                 folderId, result.folders(), result.files(), ownerId);
+        activity.record(ActivityAction.FOLDER_DELETED, TargetType.FOLDER, folderId, name,
+                null, String.valueOf(result.files()));
         return result;
     }
 
@@ -65,6 +72,10 @@ public class TrashService {
 
         PurgeResult result = new PurgeResult(files + folders.files(), folders.folders());
         log.info("Emptied trash for user {}: {} file(s), {} folder(s)", ownerId, result.files(), result.folders());
+        if (result.files() + result.folders() > 0) {
+            activity.record(ActivityAction.TRASH_EMPTIED, null, null, null,
+                    null, String.valueOf(result.files() + result.folders()));
+        }
         return result;
     }
 
@@ -96,6 +107,7 @@ public class TrashService {
 
         if (files > 0 || folders > 0) {
             log.info("Trash retention ({} days): purged {} file(s) and {} folder(s)", retentionDays, files, folders);
+            activity.recordSystem(ActivityAction.TRASH_EXPIRED, String.valueOf(files + folders));
         }
         return new PurgeResult(files, folders);
     }

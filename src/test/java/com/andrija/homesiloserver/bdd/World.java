@@ -82,6 +82,10 @@ public class World {
         return name + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
+    boolean hasAccount(String name) {
+        return accounts.containsKey(name);
+    }
+
     void signInAs(String name) {
         me = account(name);
     }
