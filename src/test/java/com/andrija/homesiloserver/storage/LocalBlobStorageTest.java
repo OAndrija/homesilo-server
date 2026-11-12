@@ -31,7 +31,7 @@ class LocalBlobStorageTest {
         HomesiloProperties properties = new HomesiloProperties(
                 new HomesiloProperties.Jwt("x".repeat(32), Duration.ofHours(1)),
                 new HomesiloProperties.Auth("s", false, true, 5, Duration.ofMinutes(1)),
-                new HomesiloProperties.Storage(root.toString(), DataSize.ofGigabytes(1)),
+                new HomesiloProperties.Storage(root.toString(), DataSize.ofGigabytes(1), "target/unused-thumbnails"),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
                 new HomesiloProperties.Cors(List.of()),
                 new HomesiloProperties.Activity(90));

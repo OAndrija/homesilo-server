@@ -75,6 +75,7 @@ All settings are environment variables (mapped in `application.properties`).
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
 | `REGISTRATION_ENABLED` | `true` | Allow self-registration after the first (admin) account |
 | `STORAGE_BASE_PATH` | `./data/storage` | Where blobs are stored |
+| `THUMBNAIL_PATH` | `./data/thumbnails` | Cache of image previews for the grid view; safe to delete |
 | `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |
 | `MAX_UPLOAD_SIZE` | `5GB` | Largest single upload |
 | `TRASH_RETENTION_DAYS` | `30` | Purge trash older than this; `0` keeps it forever |

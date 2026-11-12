@@ -1,8 +1,8 @@
 package com.andrija.homesiloserver.file;
 
-import com.andrija.homesiloserver.activity.TargetType;
-import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.ActivityAction;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.TargetType;
 import com.andrija.homesiloserver.common.exception.BadRequestException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;
@@ -12,9 +12,10 @@ import com.andrija.homesiloserver.common.web.PageResponse;
 import com.andrija.homesiloserver.file.dto.FileMetadataResponse;
 import com.andrija.homesiloserver.folder.Folder;
 import com.andrija.homesiloserver.folder.FolderService;
-import com.andrija.homesiloserver.storage.BlobStorage;
 import com.andrija.homesiloserver.storage.BlobStorage.StoredBlob;
+import com.andrija.homesiloserver.storage.BlobStorage;
 import com.andrija.homesiloserver.storage.BlobsReleasedEvent;
+import com.andrija.homesiloserver.thumbnail.ThumbnailWanted;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -98,6 +99,7 @@ public class FileService {
         log.info("Uploaded '{}' ({} bytes) as {} for user {}", name, blob.size(), saved.getId(), ownerId);
         activity.record(ActivityAction.FILE_UPLOADED, TargetType.FILE, saved.getId(), name,
                 null, String.valueOf(blob.size()));
+        events.publishEvent(new ThumbnailWanted(ownerId, blob.hash(), saved.getContentType(), blob.size()));
         return FileMetadataResponse.from(saved);
     }
 
@@ -132,6 +134,14 @@ public class FileService {
     public PageResponse<FileMetadataResponse> searchTrashed(UUID ownerId, String query, Pageable pageable) {
         return page(fileRepository.findTopLevelTrashedByName(ownerId, likePattern(query), pageable));
     }
+
+    /** What a thumbnail is made from. Trashed files have one too, for the trash view. */
+    public ThumbnailSource getThumbnailSource(UUID fileId, UUID ownerId) {
+        FileMetadata file = getOwned(fileId, ownerId);
+        return new ThumbnailSource(ownerId, file.getStoredFileName(), file.getContentType(), file.getSize());
+    }
+
+    public record ThumbnailSource(UUID ownerId, String hash, String contentType, long size) {}
 
     /** Resolves an active file and its bytes for download or preview. */
     public FileContent getContent(UUID fileId, UUID ownerId) {

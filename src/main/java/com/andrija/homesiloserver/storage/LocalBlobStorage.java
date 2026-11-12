@@ -50,7 +50,7 @@ public class LocalBlobStorage implements BlobStorage {
     }
 
     @PostConstruct
-    void init() {
+    public void init() {
         try {
             Files.createDirectories(tmpDir);
         } catch (IOException ex) {

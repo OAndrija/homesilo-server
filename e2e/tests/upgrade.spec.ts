@@ -104,10 +104,19 @@ test('files and folders from the old version are all there and downloadable', as
   const viewer = page.getByRole('dialog', { name: 'Preview of beach.png' });
   await expect(viewer).toBeVisible();
   await expect
-    .poll(() => viewer.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .poll(() => viewer.locator('img.image').evaluate((img: HTMLImageElement) => img.naturalWidth))
     .toBe(1);
   await page.keyboard.press('Escape');
   await expect(viewer).toBeHidden();
+
+  // The grid shows the image's own thumbnail, made by the server on request.
+  await page.getByRole('radio', { name: 'Grid' }).click();
+  const tile = page.getByRole('option', { name: 'beach.png' });
+  await expect(tile).toBeVisible();
+  await expect
+    .poll(() => tile.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBe(1);
+  await page.getByRole('radio', { name: 'List' }).click();
 
   await row(page, '2024').dblclick();
   await expect(row(page, 'notes.md')).toBeVisible();

@@ -47,7 +47,9 @@ public record HomesiloProperties(
 
     public record Storage(
             @NotBlank String basePath,
-            @DefaultValue("100GB") @NotNull DataSize defaultQuota
+            @DefaultValue("100GB") @NotNull DataSize defaultQuota,
+            /* Where image thumbnails are cached. Safe to delete; they are made again on demand. */
+            @DefaultValue("./data/thumbnails") @NotBlank String thumbnailPath
     ) {}
 
     public record Trash(
