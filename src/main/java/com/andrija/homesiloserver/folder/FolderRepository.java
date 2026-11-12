@@ -24,6 +24,11 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
 
     List<Folder> findByOwnerIdAndTrashedFalseAndNameContainingIgnoreCaseOrderByNameAsc(UUID ownerId, String query);
 
+    List<Folder> findByOwnerIdAndStarredTrueAndTrashedFalseOrderByNameAsc(UUID ownerId);
+
+    List<Folder> findByOwnerIdAndStarredTrueAndTrashedFalseAndNameContainingIgnoreCaseOrderByNameAsc(
+            UUID ownerId, String query);
+
     // Sibling-name checks (see Folder javadoc for why this isn't a DB constraint)
     boolean existsByOwnerIdAndParentIsNullAndNameIgnoreCaseAndTrashedFalse(UUID ownerId, String name);
 
@@ -53,6 +58,8 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
     List<UUID> findTrashedIds(@Param("ownerId") UUID ownerId);
 
     long countByOwnerIdAndTrashedFalse(UUID ownerId);
+
+    long countByOwnerIdAndStarredTrueAndTrashedFalse(UUID ownerId);
 
     // ── Bulk operations (bypass the persistence context) ─────────────────────
 

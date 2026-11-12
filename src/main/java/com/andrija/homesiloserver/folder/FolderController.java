@@ -56,6 +56,15 @@ public class FolderController {
         return folderService.listTrashed(principal.getId(), pageable);
     }
 
+    /** Starred folders (not in trash), by name; {@code query} narrows them. */
+    @GetMapping("/starred")
+    public List<FolderResponse> listStarredFolders(
+            @RequestParam(required = false) String query,
+            @AuthenticationPrincipal ServerUserDetails principal
+    ) {
+        return folderService.listStarred(principal.getId(), query);
+    }
+
     @GetMapping("/search")
     public List<FolderResponse> searchFolders(
             @RequestParam @NotBlank String query,
@@ -106,6 +115,14 @@ public class FolderController {
             @AuthenticationPrincipal ServerUserDetails principal
     ) {
         return folderService.move(folderId, request.targetParentId(), principal.getId());
+    }
+
+    @PatchMapping("/{folderId}/star")
+    public FolderResponse toggleStar(
+            @PathVariable UUID folderId,
+            @AuthenticationPrincipal ServerUserDetails principal
+    ) {
+        return folderService.toggleStar(folderId, principal.getId());
     }
 
     @PatchMapping("/{folderId}/trash")

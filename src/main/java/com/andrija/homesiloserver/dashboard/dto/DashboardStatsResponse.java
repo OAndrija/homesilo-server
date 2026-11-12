@@ -7,6 +7,7 @@ import java.util.List;
 /**
  * @param storageUsedBytes everything counted against the quota, trash included
  * @param trashedBytes       the part of {@code storageUsedBytes} that is in trash
+ * @param starredCount       starred files and folders, not counting trash
  * @param trashRetentionDays days before trashed items are purged automatically; 0 = never
  */
 public record DashboardStatsResponse(

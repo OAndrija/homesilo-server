@@ -11,6 +11,7 @@ public record FolderResponse(
         UUID parentId,
         String parentName,
         boolean trashed,
+        boolean starred,
         LocalDateTime trashedAt,
         LocalDateTime createdAt,
         LocalDateTime lastModified
@@ -23,6 +24,7 @@ public record FolderResponse(
                 parent != null ? parent.getId() : null,
                 parent != null ? parent.getName() : null,
                 folder.isTrashed(),
+                folder.isStarred(),
                 folder.getTrashedAt(),
                 folder.getCreatedAt(),
                 folder.getLastModified()

@@ -108,7 +108,24 @@ public class FolderService {
                 .toList();
     }
 
+    /** Starred folders that aren't in trash, by name; {@code query} narrows them like search. */
+    public List<FolderResponse> listStarred(UUID ownerId, String query) {
+        List<Folder> folders = query == null || query.isBlank()
+                ? folderRepository.findByOwnerIdAndStarredTrueAndTrashedFalseOrderByNameAsc(ownerId)
+                : folderRepository.findByOwnerIdAndStarredTrueAndTrashedFalseAndNameContainingIgnoreCaseOrderByNameAsc(
+                        ownerId, query.trim());
+        return folders.stream().map(FolderResponse::from).toList();
+    }
+
     // ── Commands ─────────────────────────────────────────────────────────────
+
+    /** Stars or unstars the folder. Its contents keep their own stars. */
+    @Transactional
+    public FolderResponse toggleStar(UUID folderId, UUID ownerId) {
+        Folder folder = getWritable(folderId, ownerId);
+        folder.setStarred(!folder.isStarred());
+        return FolderResponse.from(folder);
+    }
 
     @Transactional
     public FolderResponse create(CreateFolderRequest request, UUID ownerId) {
