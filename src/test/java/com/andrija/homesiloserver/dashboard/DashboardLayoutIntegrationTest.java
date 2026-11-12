@@ -67,6 +67,21 @@ class DashboardLayoutIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void aTileKeepsItsLookAndTilesWithoutOneHaveNone() throws Exception {
+        Session user = register();
+        save(user, """
+                {"tiles":[{"id":"storage","size":"large","variant":"ring"},{"id":"recent","size":"wide"}]}
+                """).andExpect(status().isOk());
+        String body = layout(user);
+        assertThat(JsonPath.<String>read(body, "$.tiles[0].variant")).isEqualTo("ring");
+        assertThat(JsonPath.<Object>read(body, "$.tiles[1].variant")).isNull();
+
+        save(user, "{\"tiles\":[{\"id\":\"storage\",\"size\":\"large\",\"variant\":\"Ring!\"}]}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("Tile variants are lowercase letters, digits and dashes"));
+    }
+
+    @Test
     void eachPersonHasTheirOwnLayout() throws Exception {
         Session ana = register();
         Session ben = register();

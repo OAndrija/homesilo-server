@@ -36,7 +36,7 @@ public class DashboardLayoutService {
         }
         DashboardLayout layout = repository.findById(userId).orElseGet(() -> new DashboardLayout(userId));
         layout.getTiles().clear();
-        request.tiles().forEach(t -> layout.getTiles().add(new DashboardTile(t.id(), t.size())));
+        request.tiles().forEach(t -> layout.getTiles().add(new DashboardTile(t.id(), t.size(), t.variant())));
         layout.setUpdatedAt(LocalDateTime.now());
         return toResponse(repository.save(layout));
     }
@@ -48,7 +48,7 @@ public class DashboardLayoutService {
 
     private static DashboardLayoutResponse toResponse(DashboardLayout layout) {
         List<TileDto> tiles = layout.getTiles().stream()
-                .map(t -> new TileDto(t.getTileId(), t.getSize()))
+                .map(t -> new TileDto(t.getTileId(), t.getSize(), t.getVariant()))
                 .toList();
         return new DashboardLayoutResponse(true, tiles, layout.getUpdatedAt());
     }

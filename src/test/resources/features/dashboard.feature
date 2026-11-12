@@ -20,6 +20,14 @@ Feature: Dashboard layout
       | storage     | tall      |
       | total-files | large     |
 
+  Scenario: The storage tile keeps the look I picked
+    When I arrange my dashboard as:
+      | tile    | size  | variant |
+      | storage | large | bars    |
+    Then my dashboard shows:
+      | tile    | size  | variant |
+      | storage | large | bars    |
+
   Scenario: Someone else's dashboard is not affected
     When I arrange my dashboard as:
       | tile    | size |
