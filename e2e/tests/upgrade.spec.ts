@@ -267,6 +267,8 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.getByRole('button', { name: 'Edit dashboard' }).click();
   await page.getByRole('button', { name: 'Remove Largest file type' }).click();
   await page.locator('.add-card', { hasText: 'Recent activity' }).click();
+  // A new tile takes the keyboard focus once it is on the page; wait for that before moving on.
+  await expect(page.locator('[data-tile="activity"]')).toBeFocused();
   // Keyboard: Shift+Left makes Storage smaller, Home moves Recent activity to the front.
   await page.locator('[data-tile="storage"]').focus();
   await page.keyboard.press('Shift+ArrowLeft');
