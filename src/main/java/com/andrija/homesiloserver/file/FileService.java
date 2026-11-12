@@ -113,6 +113,11 @@ public class FileService {
         return page(fileRepository.findByOwnerIdAndTrashedFalse(ownerId, pageable));
     }
 
+    /** Pictures (any image/* type), in whichever folder they are. */
+    public PageResponse<FileMetadataResponse> listPhotos(UUID ownerId, Pageable pageable) {
+        return page(fileRepository.findByOwnerIdAndTrashedFalseAndContentTypeStartingWith(ownerId, "image/", pageable));
+    }
+
     public PageResponse<FileMetadataResponse> listStarred(UUID ownerId, Pageable pageable) {
         return page(fileRepository.findByOwnerIdAndStarredTrueAndTrashedFalse(ownerId, pageable));
     }

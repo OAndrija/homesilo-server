@@ -310,6 +310,13 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   // Reset goes back to the default and forgets the saved layout.
   await page.getByRole('button', { name: 'Edit dashboard' }).click();
   await page.getByRole('button', { name: /^Reset/ }).click();
+  const dialog = page.getByRole('alertdialog', { name: 'Reset your dashboard?' });
+  await dialog.getByRole('button', { name: 'Reset' }).click();
+  await expect(dialog).toBeHidden();
+  // Undo brings the custom layout back; redo resets it again.
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect.poll(tiles).toEqual(expected);
+  await page.keyboard.press('Control+y');
   await page.getByRole('button', { name: 'Done' }).click();
   // Edit mode closes once the server has the change.
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible();

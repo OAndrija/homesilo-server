@@ -87,6 +87,15 @@ public class FileController {
         return fileService.listActive(principal.getId(), pageable);
     }
 
+    /** The newest pictures first, from every folder; for the dashboard and, later, a photos view. */
+    @GetMapping("/photos")
+    public PageResponse<FileMetadataResponse> listPhotos(
+            @PageableDefault(size = 24, sort = "uploadedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @AuthenticationPrincipal ServerUserDetails principal
+    ) {
+        return fileService.listPhotos(principal.getId(), pageable);
+    }
+
     @GetMapping("/starred")
     public PageResponse<FileMetadataResponse> listStarredFiles(
             @PageableDefault(size = 50, sort = "lastModified", direction = Sort.Direction.DESC) Pageable pageable,
