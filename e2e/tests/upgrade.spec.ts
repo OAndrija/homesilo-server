@@ -273,11 +273,13 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.locator('[data-tile]').evaluateAll((els) =>
     // A slide cut short by the next change is cancelled, which rejects `finished`.
     Promise.all(els.flatMap((e) => e.getAnimations().map((a) => a.finished.catch(() => null)))));
+  // Adding a tile scrolled the page; bring both into view, clear of the sticky header.
+  await page.locator('[data-tile="total-files"]').evaluate((e) => e.scrollIntoView({ block: 'center' }));
   const from = (await page.locator('[data-tile="total-files"]').boundingBox())!;
   const to = (await page.locator('[data-tile="storage"]').boundingBox())!;
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
-  await page.mouse.move(to.x + 40, to.y + 40, { steps: 20 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 20 });
   await expect(page.locator('[data-tile="total-files"]')).toHaveClass(/lifted/);
   await page.mouse.up();
   await page.getByRole('button', { name: 'Done' }).click();
