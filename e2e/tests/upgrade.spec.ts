@@ -271,7 +271,8 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.keyboard.press('Home');
   // Mouse: carry Total files onto Storage's place, once the tiles have slid into place.
   await page.locator('[data-tile]').evaluateAll((els) =>
-    Promise.all(els.flatMap((e) => e.getAnimations().map((a) => a.finished))));
+    // A slide cut short by the next change is cancelled, which rejects `finished`.
+    Promise.all(els.flatMap((e) => e.getAnimations().map((a) => a.finished.catch(() => null)))));
   const from = (await page.locator('[data-tile="total-files"]').boundingBox())!;
   const to = (await page.locator('[data-tile="storage"]').boundingBox())!;
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
