@@ -52,8 +52,12 @@ Run the client with `npm start` in `homesilo-client`; its dev server proxies `/a
 to `localhost:8080`, so the browser sees a single origin.
 
 ```bash
-./mvnw verify    # unit + integration tests (H2 in PostgreSQL mode, real Flyway migrations)
+./mvnw verify    # unit + integration tests against PostgreSQL 17 in Docker (Testcontainers)
 ```
+
+The tests need a running Docker daemon; Testcontainers starts and removes the database
+itself. With Docker you can also run the server without installing PostgreSQL:
+`./mvnw spring-boot:test-run` starts it against a throwaway database container.
 
 ## Configuration
 
