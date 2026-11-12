@@ -31,7 +31,10 @@ public class DashboardSteps {
         List<Map<String, String>> rows = table.asMaps();
         for (int i = 0; i < rows.size(); i++) {
             if (i > 0) body.append(',');
-            body.append(World.json("id", rows.get(i).get("tile"), "size", rows.get(i).get("size")));
+            Map<String, String> row = rows.get(i);
+            body.append(row.containsKey("variant")
+                    ? World.json("id", row.get("tile"), "size", row.get("size"), "variant", row.get("variant"))
+                    : World.json("id", row.get("tile"), "size", row.get("size")));
         }
         world.perform(world.asMe(put(LAYOUT).contentType(MediaType.APPLICATION_JSON).content(body.append("]}").toString())));
     }
@@ -50,6 +53,10 @@ public class DashboardSteps {
                 .containsExactlyElementsOf(rows.stream().map(r -> r.get("tile")).toList());
         assertThat(JsonPath.<List<String>>read(body, "$.tiles[*].size"))
                 .containsExactlyElementsOf(rows.stream().map(r -> r.get("size")).toList());
+        if (!rows.isEmpty() && rows.get(0).containsKey("variant")) {
+            assertThat(JsonPath.<List<String>>read(body, "$.tiles[*].variant"))
+                    .containsExactlyElementsOf(rows.stream().map(r -> r.get("variant")).toList());
+        }
     }
 
     @Then("my dashboard is the default one")
