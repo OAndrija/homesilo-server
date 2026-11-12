@@ -25,16 +25,10 @@ async function signIn(page: Page, username: string, password: string) {
 }
 
 function row(page: Page, name: string) {
-  return page.locator('tr', { has: page.locator('td.col-name', { hasText: name }) });
+  return page.locator('tr', { has: page.locator('td.file-name', { hasText: name }) });
 }
 
-/** Opens a row's ⋯ menu and picks an item from it. */
-async function rowAction(page: Page, name: string, action: string) {
-  await row(page, name).getByRole('button', { name: `Actions for ${name}` }).click();
-  await page.getByRole('menuitem', { name: action, exact: true }).click();
-}
-
-/** Settings and Sign out live in the account menu at the bottom of the sidebar. */
+/** Settings and Sign out live in the account menu at the top right. */
 async function accountMenu(page: Page, item: 'Settings' | 'Sign out') {
   await page.click('button.account-trigger');
   await page.getByRole('menuitem', { name: item }).click();
@@ -68,9 +62,10 @@ test('files and folders from the old version are all there and downloadable', as
   await expect(row(page, 'readme.txt')).toBeVisible();
 
   // Native browser download through nginx, streamed by the API.
+  await row(page, 'readme.txt').hover();
   const [download] = await Promise.all([
     page.waitForEvent('download'),
-    rowAction(page, 'readme.txt', 'Download'),
+    row(page, 'readme.txt').getByRole('button', { name: 'Download' }).click(),
   ]);
   expect(download.suggestedFilename()).toBe('readme.txt');
   expect(readFileSync((await download.path())!, 'utf8')).toBe('hello from the old version');
@@ -78,9 +73,26 @@ test('files and folders from the old version are all there and downloadable', as
   await row(page, 'Photos').dblclick();
   await expect(row(page, 'beach.png')).toBeVisible();
   await expect(row(page, '2024')).toBeVisible();
+  // Files open in the in-app viewer: the image actually loads through nginx and the API.
+  await row(page, 'beach.png').dblclick();
+  const viewer = page.getByRole('dialog', { name: 'Preview of beach.png' });
+  await expect(viewer).toBeVisible();
+  await expect
+    .poll(() => viewer.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
+    .toBe(1);
+  await page.keyboard.press('Escape');
+  await expect(viewer).toBeHidden();
+
   await row(page, '2024').dblclick();
   await expect(row(page, 'notes.md')).toBeVisible();
   await expect(page.locator('nav.breadcrumb')).toContainText('Photos');
+
+  // Text files are shown in the viewer too.
+  await row(page, 'notes.md').dblclick();
+  await expect(page.getByRole('dialog', { name: 'Preview of notes.md' }).locator('pre')).toContainText(
+    '# Trip notes',
+  );
+  await page.keyboard.press('Escape');
 
   // Starred state survived the upgrade.
   await page.click('a[href="/starred"]');
@@ -112,7 +124,8 @@ test('upload, rename, folder zip download', async ({ page }) => {
   });
   await expect(row(page, 'after-upgrade.txt')).toBeVisible();
 
-  await rowAction(page, 'after-upgrade.txt', 'Rename');
+  await row(page, 'after-upgrade.txt').hover();
+  await row(page, 'after-upgrade.txt').getByRole('button', { name: 'Rename file' }).click();
   const input = page.locator('#folderNameInput');
   await expect(input).toBeFocused();
   await page.keyboard.type('renamed');
@@ -120,9 +133,10 @@ test('upload, rename, folder zip download', async ({ page }) => {
   await expect(row(page, 'renamed.txt')).toBeVisible();
 
   await page.click('a[href="/my-files"]');
+  await row(page, 'Photos').hover();
   const [zip] = await Promise.all([
     page.waitForEvent('download'),
-    rowAction(page, 'Photos', 'Download as zip'),
+    row(page, 'Photos').getByRole('button', { name: 'Download folder as zip' }).click(),
   ]);
   expect(zip.suggestedFilename()).toBe('Photos.zip');
   const bytes = readFileSync((await zip.path())!);
@@ -136,11 +150,13 @@ test('trash: restore an old item, trash it again, empty the trash', async ({ pag
   await page.click('a[href="/trash"]');
   await expect(row(page, 'old-draft.txt')).toBeVisible();
 
-  await rowAction(page, 'old-draft.txt', 'Restore');
+  await row(page, 'old-draft.txt').hover();
+  await row(page, 'old-draft.txt').getByRole('button', { name: 'Restore' }).click();
   await expect(row(page, 'old-draft.txt')).toHaveCount(0);
 
   await page.click('a[href="/my-files"]');
-  await rowAction(page, 'old-draft.txt', 'Move to trash');
+  await row(page, 'old-draft.txt').hover();
+  await row(page, 'old-draft.txt').getByRole('button', { name: 'Move to trash' }).click();
   await expect(row(page, 'old-draft.txt')).toHaveCount(0);
 
   await page.click('a[href="/trash"]');
@@ -184,7 +200,7 @@ test('a new user can register and only sees their own files', async ({ page }) =
   await page.waitForURL(/\/home/);
 
   await page.click('a[href="/my-files"]');
-  await expect(page.getByText('No files yet')).toBeVisible();
+  await expect(page.getByText('Your silo is empty')).toBeVisible();
 
   const alicesFile = await page.request.get(`/api/v1/files/${seed.files.readme}/metadata`);
   expect(alicesFile.status()).toBe(404);

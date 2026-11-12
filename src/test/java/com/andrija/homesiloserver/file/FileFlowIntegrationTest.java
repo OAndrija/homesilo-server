@@ -115,6 +115,23 @@ class FileFlowIntegrationTest extends IntegrationTest {
     }
 
     @Test
+    void pdfPreviewMayBeFramedByTheAppOnlyAndOtherPreviewsNotAtAll() throws Exception {
+        Session session = register();
+        String pdf = upload(session, "report.pdf", "%PDF-1.4\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF", null);
+        String text = upload(session, "notes.txt", "hello", null);
+
+        mvc.perform(get("/api/v1/files/{id}/preview", pdf).cookie(session.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.CONTENT_TYPE, containsString("application/pdf")))
+                .andExpect(header().string("X-Frame-Options", "SAMEORIGIN"))
+                .andExpect(header().string("Content-Security-Policy", "frame-ancestors 'self'"));
+
+        mvc.perform(get("/api/v1/files/{id}/preview", text).cookie(session.cookie()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("X-Frame-Options", "DENY"));
+    }
+
+    @Test
     void renameMoveStarTrashRestoreLifecycle() throws Exception {
         Session session = register();
         String folder = createFolder(session, "Docs", null);
@@ -126,6 +143,14 @@ class FileFlowIntegrationTest extends IntegrationTest {
 
         mvc.perform(patch("/api/v1/files/{id}/rename", id).cookie(session.cookie()).with(csrf())
                         .contentType(MediaType.APPLICATION_JSON).content(json("name", "a/b.txt")))
+                .andExpect(status().isBadRequest());
+
+        // The extension is part of the file's type, so a rename keeps it.
+        mvc.perform(patch("/api/v1/files/{id}/rename", id).cookie(session.cookie()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(json("name", "final.i")))
+                .andExpect(status().isBadRequest());
+        mvc.perform(patch("/api/v1/files/{id}/rename", id).cookie(session.cookie()).with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON).content(json("name", "final")))
                 .andExpect(status().isBadRequest());
 
         mvc.perform(patch("/api/v1/files/{id}/move", id).cookie(session.cookie()).with(csrf())
