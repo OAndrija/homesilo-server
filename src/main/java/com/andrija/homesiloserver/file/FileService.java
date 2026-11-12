@@ -1,5 +1,8 @@
 package com.andrija.homesiloserver.file;
 
+import com.andrija.homesiloserver.activity.TargetType;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.common.exception.BadRequestException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;
@@ -45,6 +48,7 @@ public class FileService {
     private final UserService userService;
     private final BlobStorage blobStorage;
     private final ApplicationEventPublisher events;
+    private final ActivityRecorder activity;
     private final Tika tika = new Tika();
 
     // ── Upload ───────────────────────────────────────────────────────────────
@@ -92,6 +96,8 @@ public class FileService {
                 .build());
 
         log.info("Uploaded '{}' ({} bytes) as {} for user {}", name, blob.size(), saved.getId(), ownerId);
+        activity.record(ActivityAction.FILE_UPLOADED, TargetType.FILE, saved.getId(), name,
+                null, String.valueOf(blob.size()));
         return FileMetadataResponse.from(saved);
     }
 
@@ -144,7 +150,11 @@ public class FileService {
         FileMetadata file = getActive(fileId, ownerId);
         String name = newName.trim();
         requireSameExtension(file.getOriginalFileName(), name);
+        String previous = file.getOriginalFileName();
         file.setOriginalFileName(name);
+        if (!previous.equals(name)) {
+            activity.record(ActivityAction.FILE_RENAMED, TargetType.FILE, fileId, name, previous, name);
+        }
         return FileMetadataResponse.from(file);
     }
 
@@ -172,7 +182,11 @@ public class FileService {
     @Transactional
     public FileMetadataResponse move(UUID fileId, UUID targetFolderId, UUID ownerId) {
         FileMetadata file = getActive(fileId, ownerId);
-        file.setFolder(targetFolderId != null ? folderService.getWritable(targetFolderId, ownerId) : null);
+        Folder from = file.getFolder();
+        Folder to = targetFolderId != null ? folderService.getWritable(targetFolderId, ownerId) : null;
+        file.setFolder(to);
+        activity.record(ActivityAction.FILE_MOVED, TargetType.FILE, fileId, file.getOriginalFileName(),
+                from != null ? from.getName() : null, to != null ? to.getName() : null);
         return FileMetadataResponse.from(file);
     }
 
@@ -188,6 +202,7 @@ public class FileService {
         FileMetadata file = getActive(fileId, ownerId);
         file.setTrashed(true);
         file.setTrashedAt(LocalDateTime.now());
+        activity.record(ActivityAction.FILE_TRASHED, TargetType.FILE, fileId, file.getOriginalFileName());
         return FileMetadataResponse.from(file);
     }
 
@@ -203,6 +218,7 @@ public class FileService {
         }
         file.setTrashed(false);
         file.setTrashedAt(null);
+        activity.record(ActivityAction.FILE_RESTORED, TargetType.FILE, fileId, file.getOriginalFileName());
         return FileMetadataResponse.from(file);
     }
 
@@ -213,6 +229,7 @@ public class FileService {
             throw new ConflictException("Move the file to trash before deleting it permanently");
         }
         fileRepository.delete(file);
+        activity.record(ActivityAction.FILE_DELETED, TargetType.FILE, fileId, file.getOriginalFileName());
         events.publishEvent(new BlobsReleasedEvent(ownerId, List.of(file.getStoredFileName())));
         log.info("Permanently deleted file {} for user {}", fileId, ownerId);
     }

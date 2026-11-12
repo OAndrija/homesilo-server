@@ -69,6 +69,10 @@ test('the admin can add a user, who can then sign in', async ({ page }) => {
   await page.getByRole('button', { name: 'Add user' }).last().click();
   await expect(page.locator('tbody tr', { hasText: 'e2e-member' })).toBeVisible();
 
+  // The activity log shows what just happened.
+  await page.getByRole('link', { name: 'Activity' }).click();
+  await expect(page.getByText('added e2e-member as a member')).toBeVisible();
+
   await accountMenu(page, 'Sign out');
   await signIn(page, 'e2e-member', 'e2e-member-password');
   await expect(page.getByText('Welcome back, e2e-member')).toBeVisible();

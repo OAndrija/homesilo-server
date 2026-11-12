@@ -1,5 +1,8 @@
 package com.andrija.homesiloserver.folder;
 
+import com.andrija.homesiloserver.activity.TargetType;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;
 import com.andrija.homesiloserver.common.web.PageResponse;
@@ -34,6 +37,7 @@ public class FolderService {
     private final FolderRepository folderRepository;
     private final FileMetadataRepository fileMetadataRepository;
     private final UserRepository userRepository;
+    private final ActivityRecorder activity;
 
     // ── Lookups (also used by other services) ────────────────────────────────
 
@@ -139,6 +143,8 @@ public class FolderService {
                 .parent(parent)
                 .build());
         log.info("Created folder '{}' ({}) for user {}", saved.getName(), saved.getId(), ownerId);
+        activity.record(ActivityAction.FOLDER_CREATED, TargetType.FOLDER, saved.getId(), saved.getName(),
+                null, parent != null ? parent.getName() : null);
         return FolderResponse.from(saved);
     }
 
@@ -147,7 +153,11 @@ public class FolderService {
         Folder folder = getWritable(folderId, ownerId);
         String name = newName.trim();
         assertNameAvailable(ownerId, folder.parentFolderId(), name, folderId);
+        String previous = folder.getName();
         folder.setName(name);
+        if (!previous.equals(name)) {
+            activity.record(ActivityAction.FOLDER_RENAMED, TargetType.FOLDER, folderId, name, previous, name);
+        }
         return FolderResponse.from(folder);
     }
 
@@ -164,7 +174,10 @@ public class FolderService {
         }
 
         assertNameAvailable(ownerId, targetParentId, folder.getName(), folderId);
+        Folder from = folder.getParent();
         folder.setParent(target);
+        activity.record(ActivityAction.FOLDER_MOVED, TargetType.FOLDER, folderId, folder.getName(),
+                from != null ? from.getName() : null, target != null ? target.getName() : null);
         return FolderResponse.from(folder);
     }
 
@@ -183,6 +196,7 @@ public class FolderService {
         fileMetadataRepository.markTrashedInFolders(ownerId, ids, now);
 
         log.info("Trashed folder {} with {} subfolder(s) for user {}", folderId, ids.size() - 1, ownerId);
+        activity.record(ActivityAction.FOLDER_TRASHED, TargetType.FOLDER, folderId, folder.getName());
         return FolderResponse.from(getOwned(folderId, ownerId));
     }
 
@@ -210,6 +224,7 @@ public class FolderService {
         fileMetadataRepository.markRestoredInFolders(ownerId, ids);
 
         log.info("Restored folder {} with {} subfolder(s) for user {}", folderId, ids.size() - 1, ownerId);
+        activity.record(ActivityAction.FOLDER_RESTORED, TargetType.FOLDER, folderId, folder.getName());
         return FolderResponse.from(getOwned(folderId, ownerId));
     }
 

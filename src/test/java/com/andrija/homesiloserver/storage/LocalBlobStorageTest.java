@@ -33,7 +33,8 @@ class LocalBlobStorageTest {
                 new HomesiloProperties.Auth("s", false, true, 5, Duration.ofMinutes(1)),
                 new HomesiloProperties.Storage(root.toString(), DataSize.ofGigabytes(1)),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
-                new HomesiloProperties.Cors(List.of()));
+                new HomesiloProperties.Cors(List.of()),
+                new HomesiloProperties.Activity(90));
         storage = new LocalBlobStorage(properties);
         storage.init();
     }

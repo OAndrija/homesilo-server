@@ -1,5 +1,8 @@
 package com.andrija.homesiloserver.admin;
 
+import com.andrija.homesiloserver.activity.TargetType;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.admin.dto.AdminOverviewResponse;
 import com.andrija.homesiloserver.admin.dto.AdminUserResponse;
 import com.andrija.homesiloserver.admin.dto.CreateUserRequest;
@@ -58,6 +61,7 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final HomesiloProperties properties;
+    private final ActivityRecorder activity;
 
     public AdminOverviewResponse overview() {
         return new AdminOverviewResponse(
@@ -99,6 +103,8 @@ public class AdminUserService {
         User user = userService.createAccount(
                 request.username(), request.email(), request.password(), request.role(), quota, false);
         log.info("Admin {} created user '{}' ({}) with role {}", actingAdminId, user.getUsername(), user.getId(), user.getRole());
+        activity.record(ActivityAction.USER_CREATED, TargetType.USER, user.getId(), user.getUsername(),
+                null, user.getRole().name());
         return AdminUserResponse.from(user, 0, 0);
     }
 
@@ -114,9 +120,24 @@ public class AdminUserService {
             }
         }
 
-        if (request.enabled() != null) user.setEnabled(request.enabled());
-        if (request.role() != null) user.setRole(request.role());
-        if (request.storageQuotaBytes() != null) user.setStorageQuotaBytes(request.storageQuotaBytes());
+        // One log entry per change, so the history reads "made Admin", "limit 100 GB → 150 GB".
+        if (request.enabled() != null && request.enabled() != user.isEnabled()) {
+            user.setEnabled(request.enabled());
+            activity.record(request.enabled() ? ActivityAction.USER_ENABLED : ActivityAction.USER_DISABLED,
+                    TargetType.USER, userId, user.getUsername());
+        }
+        if (request.role() != null && request.role() != user.getRole()) {
+            String previous = user.getRole().name();
+            user.setRole(request.role());
+            activity.record(ActivityAction.USER_ROLE_CHANGED, TargetType.USER, userId, user.getUsername(),
+                    previous, request.role().name());
+        }
+        if (request.storageQuotaBytes() != null && request.storageQuotaBytes() != user.getStorageQuotaBytes()) {
+            String previous = String.valueOf(user.getStorageQuotaBytes());
+            user.setStorageQuotaBytes(request.storageQuotaBytes());
+            activity.record(ActivityAction.USER_STORAGE_LIMIT_CHANGED, TargetType.USER, userId, user.getUsername(),
+                    previous, String.valueOf(request.storageQuotaBytes()));
+        }
 
         log.info("Admin {} updated user {}: {}", actingAdminId, userId, request);
         return withUsage(user);
@@ -132,6 +153,7 @@ public class AdminUserService {
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setPasswordChangedAt(LocalDateTime.now());
         log.info("Admin {} reset the password of user {}", actingAdminId, userId);
+        activity.record(ActivityAction.USER_PASSWORD_RESET, TargetType.USER, userId, user.getUsername());
     }
 
     /** Deletes the account with all of its files and folders. Stored blobs are released after commit. */
@@ -153,6 +175,7 @@ public class AdminUserService {
         }
         log.info("Admin {} deleted user '{}' ({}) with {} file(s) and {} folder(s)",
                 actingAdminId, username, userId, files, folders);
+        activity.record(ActivityAction.USER_DELETED, TargetType.USER, userId, username, null, String.valueOf(files));
     }
 
     private AdminUserResponse withUsage(User user) {
