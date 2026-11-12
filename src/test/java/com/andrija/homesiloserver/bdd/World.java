@@ -52,7 +52,7 @@ public class World {
 
     /** Signs up a new person; returns the account, or null when the server refused. */
     Account signUp(String name) {
-        String username = name + "-" + UUID.randomUUID().toString().substring(0, 8);
+        String username = uniqueUsername(name);
         MvcResult result = perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json("username", username, "email", username + "@example.com", "password", PASSWORD)));
@@ -70,6 +70,16 @@ public class World {
         Account created = signUp(name);
         assertThat(created).as("sign-up of %s", name).isNotNull();
         return created;
+    }
+
+    /** Adds someone the scenario didn't sign up itself (e.g. an account an admin created). */
+    void remember(Account account) {
+        accounts.put(account.name(), account);
+    }
+
+    /** A unique username for a scenario name, so scenarios don't collide on the shared database. */
+    static String uniqueUsername(String name) {
+        return name + "-" + UUID.randomUUID().toString().substring(0, 8);
     }
 
     void signInAs(String name) {

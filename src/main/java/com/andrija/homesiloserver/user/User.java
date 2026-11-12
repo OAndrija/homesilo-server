@@ -58,6 +58,10 @@ public class User {
     @Column(nullable = false)
     private long storageQuotaBytes;
 
+    /** Last successful sign-in (registration counts); null if they never signed in. */
+    @Column
+    private LocalDateTime lastLoginAt;
+
     /** Tokens issued before this instant are rejected (set on password change). */
     @Column
     private LocalDateTime passwordChangedAt;
