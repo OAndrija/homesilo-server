@@ -78,7 +78,8 @@ public class SecurityConfig {
                         .accessDeniedHandler((request, response, ex) ->
                                 ProblemResponses.write(response, HttpStatus.FORBIDDEN, ex instanceof CsrfException
                                         ? "Missing or invalid CSRF token"
-                                        : "Access denied")))
+                                        // Same wording as the method-level check in GlobalExceptionHandler.
+                                        : "You do not have permission to perform this action")))
                 .authorizeHttpRequests(auth -> auth
                         // The original request was already authorised; don't re-check the async
                         // dispatch that completes streamed downloads, or the error dispatch.
