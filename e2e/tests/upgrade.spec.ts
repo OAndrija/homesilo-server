@@ -90,6 +90,21 @@ test('files and folders from the old version are all there and downloadable', as
   await expect(row(page, 'Photos')).toBeVisible();
   await expect(row(page, 'readme.txt')).toBeVisible();
 
+  // Properties: what a file is and where it lives, and what a folder holds.
+  await row(page, 'readme.txt').hover();
+  await row(page, 'readme.txt').getByRole('button', { name: 'Properties' }).click();
+  const props = page.getByRole('dialog', { name: 'readme.txt' });
+  await expect(props).toContainText('Plain text');
+  await expect(props).toContainText('26 bytes');
+  await expect(props.getByRole('navigation', { name: 'Location' })).toContainText('My Files');
+  await page.keyboard.press('Escape');
+  await expect(props).toBeHidden();
+  await row(page, 'Photos').hover();
+  await row(page, 'Photos').getByRole('button', { name: 'Properties' }).click();
+  const folderProps = page.getByRole('dialog', { name: 'Photos' });
+  await expect(folderProps).toContainText(/\d+ files?, \d+ folders?/);
+  await page.keyboard.press('Escape');
+
   // Native browser download through nginx, streamed by the API.
   await row(page, 'readme.txt').hover();
   const [download] = await Promise.all([
