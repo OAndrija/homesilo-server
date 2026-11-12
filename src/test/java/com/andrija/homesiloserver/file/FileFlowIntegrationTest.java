@@ -116,7 +116,7 @@ class FileFlowIntegrationTest extends IntegrationTest {
                 .andExpect(jsonPath("$.thumbnail").value(true))
                 .andReturn();
         String image = read(uploaded, "$.id");
-        String text = upload(session, "notes.txt", "hello", null);
+        String archive = upload(session, "backup.bin", "\u0000\u0001binary", null);
 
         MvcResult thumb = mvc.perform(get("/api/v1/files/{id}/thumbnail", image).cookie(session.cookie()))
                 .andExpect(status().isOk())
@@ -128,9 +128,9 @@ class FileFlowIntegrationTest extends IntegrationTest {
         assertThat(decoded.getWidth()).isEqualTo(480);
         assertThat(decoded.getHeight()).isEqualTo(240);
 
-        mvc.perform(get("/api/v1/files/{id}/metadata", text).cookie(session.cookie()))
+        mvc.perform(get("/api/v1/files/{id}/metadata", archive).cookie(session.cookie()))
                 .andExpect(jsonPath("$.thumbnail").value(false));
-        mvc.perform(get("/api/v1/files/{id}/thumbnail", text).cookie(session.cookie()))
+        mvc.perform(get("/api/v1/files/{id}/thumbnail", archive).cookie(session.cookie()))
                 .andExpect(status().isNotFound());
 
         Session stranger = register();

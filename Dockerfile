@@ -11,7 +11,9 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package \
 
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
-RUN addgroup -S homesilo && adduser -S -G homesilo homesilo \
+# Fonts: the slim JRE has none, and document thumbnails draw text (PDFs, Word, notes).
+RUN apk add --no-cache fontconfig ttf-dejavu \
+    && addgroup -S homesilo && adduser -S -G homesilo homesilo \
     && mkdir -p /data/storage /data/thumbnails && chown -R homesilo:homesilo /data
 WORKDIR /app
 COPY --from=build /build/app.jar app.jar
