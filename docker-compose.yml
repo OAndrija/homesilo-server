@@ -41,6 +41,7 @@ services:
       DEFAULT_QUOTA: ${DEFAULT_QUOTA:-100GB}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5GB}
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-30}
+      ACTIVITY_RETENTION_DAYS: ${ACTIVITY_RETENTION_DAYS:-90}
       STORAGE_BASE_PATH: /data/storage
     volumes:
       - storage:/data/storage

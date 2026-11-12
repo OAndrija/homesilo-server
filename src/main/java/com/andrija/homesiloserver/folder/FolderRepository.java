@@ -24,6 +24,11 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
 
     List<Folder> findByOwnerIdAndTrashedFalseAndNameContainingIgnoreCaseOrderByNameAsc(UUID ownerId, String query);
 
+    List<Folder> findByOwnerIdAndStarredTrueAndTrashedFalseOrderByNameAsc(UUID ownerId);
+
+    List<Folder> findByOwnerIdAndStarredTrueAndTrashedFalseAndNameContainingIgnoreCaseOrderByNameAsc(
+            UUID ownerId, String query);
+
     // Sibling-name checks (see Folder javadoc for why this isn't a DB constraint)
     boolean existsByOwnerIdAndParentIsNullAndNameIgnoreCaseAndTrashedFalse(UUID ownerId, String name);
 
@@ -54,6 +59,8 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
 
     long countByOwnerIdAndTrashedFalse(UUID ownerId);
 
+    long countByOwnerIdAndStarredTrueAndTrashedFalse(UUID ownerId);
+
     // ── Bulk operations (bypass the persistence context) ─────────────────────
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
@@ -70,6 +77,14 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Folder f SET f.parent = null WHERE f.owner.id = :ownerId AND f.id IN :ids")
     int detachFromParents(@Param("ownerId") UUID ownerId, @Param("ids") Collection<UUID> ids);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Folder f SET f.parent = null WHERE f.owner.id = :ownerId")
+    int detachAllByOwner(@Param("ownerId") UUID ownerId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM Folder f WHERE f.owner.id = :ownerId")
+    int deleteAllByOwner(@Param("ownerId") UUID ownerId);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Folder f WHERE f.owner.id = :ownerId AND f.id IN :ids")

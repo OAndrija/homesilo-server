@@ -1,11 +1,13 @@
 package com.andrija.homesiloserver.auth;
 
+import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.RegisterRequest;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ForbiddenException;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
 import com.andrija.homesiloserver.user.UserRole;
+import com.andrija.homesiloserver.user.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,9 +34,11 @@ class AuthServiceTest {
                 new HomesiloProperties.Auth("homesilo_session", false, registrationEnabled, 5, Duration.ofMinutes(15)),
                 new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1)),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
-                new HomesiloProperties.Cors(List.of()));
-        return new AuthService(mock(AuthenticationManager.class), users, encoder,
-                new LoginAttemptService(properties), properties);
+                new HomesiloProperties.Cors(List.of()),
+                new HomesiloProperties.Activity(90));
+        ActivityRecorder activity = mock(ActivityRecorder.class);
+        return new AuthService(mock(AuthenticationManager.class), users, new UserService(users, encoder, activity),
+                new LoginAttemptService(properties), properties, activity);
     }
 
     private static final RegisterRequest REQUEST = new RegisterRequest("alice", " Alice@Example.COM ", "password123");
@@ -50,6 +54,7 @@ class AuthServiceTest {
         assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
         assertThat(user.getEmail()).isEqualTo("alice@example.com");
         assertThat(user.getStorageQuotaBytes()).isEqualTo(DataSize.ofGigabytes(1).toBytes());
+        assertThat(user.getLastLoginAt()).as("signing up signs you in").isNotNull();
     }
 
     @Test

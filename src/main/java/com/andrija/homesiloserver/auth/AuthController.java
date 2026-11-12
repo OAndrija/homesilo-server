@@ -1,5 +1,9 @@
 package com.andrija.homesiloserver.auth;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.andrija.homesiloserver.security.ServerUserDetails;
+import com.andrija.homesiloserver.activity.ActivityRecorder;
+import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.auth.dto.AuthConfigResponse;
 import com.andrija.homesiloserver.auth.dto.AuthResponse;
 import com.andrija.homesiloserver.auth.dto.LoginRequest;
@@ -26,6 +30,7 @@ public class AuthController {
     private final AuthService authService;
     private final AuthCookies authCookies;
     private final JwtService jwtService;
+    private final ActivityRecorder activity;
 
     @GetMapping("/config")
     public AuthConfigResponse config() {
@@ -46,7 +51,8 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal ServerUserDetails principal) {
+        if (principal != null) activity.recordAs(principal.getUser(), ActivityAction.SIGNED_OUT);
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookies.clearedCookie().toString())
                 .build();

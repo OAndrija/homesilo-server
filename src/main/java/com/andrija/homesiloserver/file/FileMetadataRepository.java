@@ -74,6 +74,47 @@ public interface FileMetadataRepository extends JpaRepository<FileMetadata, UUID
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner.id = :ownerId")
     long sumSizeByOwnerId(@Param("ownerId") UUID ownerId);
 
+    // ── Admin: usage across accounts ─────────────────────────────────────────
+
+    /** Storage (trash included) and active file count for each of the given owners that has files. */
+    @Query("SELECT f.owner.id AS ownerId, COALESCE(SUM(f.size), 0) AS bytes, "
+            + "SUM(CASE WHEN f.trashed = false THEN 1 ELSE 0 END) AS files "
+            + "FROM FileMetadata f WHERE f.owner.id IN :ownerIds GROUP BY f.owner.id")
+    List<OwnerUsage> usageByOwners(@Param("ownerIds") Collection<UUID> ownerIds);
+
+    interface OwnerUsage {
+        UUID getOwnerId();
+
+        long getBytes();
+
+        long getFiles();
+    }
+
+    @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f")
+    long sumAllSizes();
+
+    /** Accounts using the most storage (trash included), largest first. */
+    @Query("SELECT f.owner.id AS ownerId, f.owner.username AS username, SUM(f.size) AS bytes "
+            + "FROM FileMetadata f GROUP BY f.owner.id, f.owner.username ORDER BY SUM(f.size) DESC")
+    List<TopUsage> topUsage(Pageable pageable);
+
+    interface TopUsage {
+        UUID getOwnerId();
+
+        String getUsername();
+
+        long getBytes();
+    }
+
+    long countByTrashedFalse();
+
+    @Query("SELECT DISTINCT f.storedFileName FROM FileMetadata f WHERE f.owner.id = :ownerId")
+    List<String> findBlobsByOwner(@Param("ownerId") UUID ownerId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM FileMetadata f WHERE f.owner.id = :ownerId")
+    int deleteAllByOwner(@Param("ownerId") UUID ownerId);
+
     @Query("SELECT COALESCE(SUM(f.size), 0) FROM FileMetadata f WHERE f.owner.id = :ownerId AND f.trashed = true")
     long sumTrashedSizeByOwnerId(@Param("ownerId") UUID ownerId);
 

@@ -25,7 +25,8 @@ public record HomesiloProperties(
         @Valid @NotNull @DefaultValue Auth auth,
         @Valid @NotNull Storage storage,
         @Valid @NotNull @DefaultValue Trash trash,
-        @Valid @NotNull @DefaultValue Cors cors
+        @Valid @NotNull @DefaultValue Cors cors,
+        @Valid @NotNull @DefaultValue Activity activity
 ) {
 
     public record Jwt(
@@ -62,5 +63,10 @@ public record HomesiloProperties(
      */
     public record Cors(
             @DefaultValue List<String> allowedOrigins
+    ) {}
+
+    public record Activity(
+            /* Activity log entries older than this are deleted nightly. 0 keeps them forever. */
+            @DefaultValue("90") @Min(0) int retentionDays
     ) {}
 }

@@ -52,8 +52,16 @@ Run the client with `npm start` in `homesilo-client`; its dev server proxies `/a
 to `localhost:8080`, so the browser sees a single origin.
 
 ```bash
-./mvnw verify    # unit + integration tests (H2 in PostgreSQL mode, real Flyway migrations)
+./mvnw verify    # unit + integration tests against PostgreSQL 17 in Docker (Testcontainers)
 ```
+
+Behaviour scenarios live in `src/test/resources/features` as plain-language Gherkin
+(accounts, files, trash, storage limit). Cucumber runs them in the same `verify`
+against the REST API and writes `target/cucumber-report.html`.
+
+The tests need a running Docker daemon; Testcontainers starts and removes the database
+itself. With Docker you can also run the server without installing PostgreSQL:
+`./mvnw spring-boot:test-run` starts it against a throwaway database container.
 
 ## Configuration
 
@@ -70,6 +78,7 @@ All settings are environment variables (mapped in `application.properties`).
 | `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |
 | `MAX_UPLOAD_SIZE` | `5GB` | Largest single upload |
 | `TRASH_RETENTION_DAYS` | `30` | Purge trash older than this; `0` keeps it forever |
+| `ACTIVITY_RETENTION_DAYS` | `90` | Delete activity log entries older than this; `0` keeps them forever |
 | `CORS_ALLOWED_ORIGINS` | — (CORS off) | Comma-separated origins, only if the UI is served from a different origin |
 
 ## Architecture

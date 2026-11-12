@@ -7,6 +7,7 @@ import jakarta.servlet.http.Cookie;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,12 +25,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Full-stack tests against the real security chain, Flyway schema and blob store.
+ * Full-stack tests against the real security chain, Flyway schema, blob store and a
+ * PostgreSQL container. All subclasses share one Spring context and so one database.
  * Every test registers its own users, so tests are independent without needing
  * transactional rollback (which would hide after-commit behaviour).
  */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Import(TestcontainersConfiguration.class)
 public abstract class IntegrationTest {
 
     public static final String SESSION_COOKIE = "homesilo_session";
@@ -57,6 +60,15 @@ public abstract class IntegrationTest {
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
+    }
+
+    /** A new account with the admin role (the role is read from the database on every request). */
+    protected Session admin() {
+        Session session = register("admin-" + UUID.randomUUID().toString().substring(0, 8));
+        User user = userRepository.findById(session.id()).orElseThrow();
+        user.setRole(com.andrija.homesiloserver.user.UserRole.ADMIN);
+        userRepository.save(user);
+        return session;
     }
 
     protected void setQuota(Session session, long bytes) {

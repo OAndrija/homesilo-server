@@ -29,7 +29,7 @@ function row(page: Page, name: string) {
 }
 
 /** Settings and Sign out live in the account menu at the top right. */
-async function accountMenu(page: Page, item: 'Settings' | 'Sign out') {
+async function accountMenu(page: Page, item: 'Settings' | 'Manage users' | 'Sign out') {
   await page.click('button.account-trigger');
   await page.getByRole('menuitem', { name: item }).click();
 }
@@ -52,6 +52,32 @@ test('a user from the old version signs in with their old password and is promot
 
   await accountMenu(page, 'Settings');
   await expect(page.getByText('Administrator', { exact: true })).toBeVisible();
+});
+
+test('the admin can add a user, who can then sign in', async ({ page }) => {
+  await signIn(page, ALICE.username, ALICE.password);
+  await accountMenu(page, 'Manage users');
+  await expect(page).toHaveURL(/\/admin\/users/);
+  const me = page.locator('tbody tr', { hasText: ALICE.username });
+  await expect(me.getByText('you', { exact: true })).toBeVisible();
+  await expect(me.getByText('Admin', { exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Add user' }).click();
+  await page.fill('#new-username', 'e2e-member');
+  await page.fill('#new-email', 'e2e-member@example.com');
+  await page.fill('#new-password', 'e2e-member-password');
+  await page.getByRole('button', { name: 'Add user' }).last().click();
+  await expect(page.locator('tbody tr', { hasText: 'e2e-member' })).toBeVisible();
+
+  // The activity log shows what just happened.
+  await page.getByRole('link', { name: 'Activity' }).click();
+  await expect(page.getByText('added e2e-member as a member')).toBeVisible();
+
+  await accountMenu(page, 'Sign out');
+  await signIn(page, 'e2e-member', 'e2e-member-password');
+  await expect(page.getByText('Welcome back, e2e-member')).toBeVisible();
+  // Members don't see the admin area.
+  await expect(page.getByRole('link', { name: 'Users' })).toHaveCount(0);
 });
 
 test('files and folders from the old version are all there and downloadable', async ({ page }) => {
