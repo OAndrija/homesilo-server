@@ -62,6 +62,15 @@ public abstract class IntegrationTest {
         }
     }
 
+    /** A new account with the admin role (the role is read from the database on every request). */
+    protected Session admin() {
+        Session session = register("admin-" + UUID.randomUUID().toString().substring(0, 8));
+        User user = userRepository.findById(session.id()).orElseThrow();
+        user.setRole(com.andrija.homesiloserver.user.UserRole.ADMIN);
+        userRepository.save(user);
+        return session;
+    }
+
     protected void setQuota(Session session, long bytes) {
         User user = userRepository.findById(session.id()).orElseThrow();
         user.setStorageQuotaBytes(bytes);

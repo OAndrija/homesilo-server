@@ -79,6 +79,14 @@ public interface FolderRepository extends JpaRepository<Folder, UUID> {
     int detachFromParents(@Param("ownerId") UUID ownerId, @Param("ids") Collection<UUID> ids);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Folder f SET f.parent = null WHERE f.owner.id = :ownerId")
+    int detachAllByOwner(@Param("ownerId") UUID ownerId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("DELETE FROM Folder f WHERE f.owner.id = :ownerId")
+    int deleteAllByOwner(@Param("ownerId") UUID ownerId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("DELETE FROM Folder f WHERE f.owner.id = :ownerId AND f.id IN :ids")
     int deleteByIds(@Param("ownerId") UUID ownerId, @Param("ids") Collection<UUID> ids);
 }

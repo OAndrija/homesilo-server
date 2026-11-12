@@ -4,17 +4,15 @@ import com.andrija.homesiloserver.common.exception.BadRequestException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import com.andrija.homesiloserver.common.exception.NotFoundException;
 import com.andrija.homesiloserver.user.dto.ChangePasswordRequest;
-import com.andrija.homesiloserver.user.dto.UpdateUserRequest;
 import com.andrija.homesiloserver.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 @Slf4j
@@ -35,11 +33,31 @@ public class UserService {
         return UserResponse.from(getEntity(id));
     }
 
-    public List<UserResponse> listAll() {
-        return userRepository.findAll(Sort.by(Sort.Direction.ASC, "username"))
-                .stream()
-                .map(UserResponse::from)
-                .toList();
+    /**
+     * Creates an account after checking that the username and email are free (both
+     * case-insensitively). Used by sign-up and by admins adding people.
+     *
+     * @param signedIn whether the person is being signed in right away (sign-up)
+     */
+    @Transactional
+    public User createAccount(String username, String email, String rawPassword, UserRole role,
+                              long storageQuotaBytes, boolean signedIn) {
+        String cleanUsername = username.trim();
+        String cleanEmail = email.trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByUsernameIgnoreCase(cleanUsername)) {
+            throw new ConflictException("Username is already taken");
+        }
+        if (userRepository.existsByEmailIgnoreCase(cleanEmail)) {
+            throw new ConflictException("Email address is already registered");
+        }
+        return userRepository.save(User.builder()
+                .username(cleanUsername)
+                .email(cleanEmail)
+                .password(passwordEncoder.encode(rawPassword))
+                .role(role)
+                .storageQuotaBytes(storageQuotaBytes)
+                .lastLoginAt(signedIn ? LocalDateTime.now() : null)
+                .build());
     }
 
     @Transactional
@@ -52,23 +70,5 @@ public class UserService {
         user.setPasswordChangedAt(LocalDateTime.now());
         log.info("User '{}' changed their password", userId);
         return user;
-    }
-
-    @Transactional
-    public UserResponse update(UUID actingAdminId, UUID userId, UpdateUserRequest request) {
-        User user = getEntity(userId);
-        boolean demotingOrDisablingSelf = userId.equals(actingAdminId)
-                && (Boolean.FALSE.equals(request.enabled())
-                || (request.role() != null && request.role() != UserRole.ADMIN));
-        if (demotingOrDisablingSelf) {
-            throw new ConflictException("You cannot disable or demote your own account");
-        }
-
-        if (request.enabled() != null) user.setEnabled(request.enabled());
-        if (request.role() != null) user.setRole(request.role());
-        if (request.storageQuotaBytes() != null) user.setStorageQuotaBytes(request.storageQuotaBytes());
-
-        log.info("Admin '{}' updated user '{}': {}", actingAdminId, userId, request);
-        return UserResponse.from(user);
     }
 }
