@@ -278,6 +278,12 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await page.getByRole('radiogroup', { name: 'Size of Starred' }).getByRole('radio', { name: /^Tall/ }).click();
   await expect(page.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
   await page.keyboard.press('Escape');
+  // The storage tile can be a ring instead of the silo.
+  await page.locator('[data-tile="storage"]').evaluate((e) => e.scrollIntoView({ block: 'center' }));
+  await page.locator('[data-tile="storage"]').click();
+  await page.getByRole('radiogroup', { name: 'Look of Storage' }).getByRole('radio', { name: 'Ring' }).click();
+  await expect(page.locator('[data-tile="storage"] .ring')).toBeVisible();
+  await page.keyboard.press('Escape');
   // Mouse: carry Total files sideways onto its neighbour, once the tiles have slid into place.
   // (A path across other tiles would swap with those too, as it should.)
   await page.locator('[data-tile]').evaluateAll((els) =>
@@ -305,6 +311,7 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
   await expect(other.locator('[data-tile]').first()).toHaveAttribute('data-tile', 'activity');
   await expect(other.locator('[data-tile="storage"]')).toHaveAttribute('data-size', 'medium');
   await expect(other.locator('[data-tile="starred-count"]')).toHaveAttribute('data-size', 'tall');
+  await expect(other.locator('[data-tile="storage"] .hero')).toHaveAttribute('data-look', 'ring');
   await other.close();
 
   // Reset goes back to the default and forgets the saved layout.
