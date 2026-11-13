@@ -360,3 +360,29 @@ test('the dashboard can be rearranged and keeps its tiles after signing in again
     .poll(async () => (await (await page.request.get('/api/v1/dashboard/layout')).json()).customized)
     .toBe(false);
 });
+
+test('appearance belongs to the account, not the browser', async ({ page, browser }) => {
+  const html = page.locator('html');
+  await signIn(page, 'new-carol', 'carols-password');
+  await accountMenu(page, 'Settings');
+  await page.getByRole('radio', { name: 'Compact', exact: true }).click();
+  await expect(html).toHaveAttribute('data-spacing', 'compact');
+  // Saved on the server, not just in this browser.
+  await expect
+    .poll(async () => (await (await page.request.get('/api/v1/users/me/preferences')).json()).values)
+    .toEqual({ 'appearance.spacing': 'compact' });
+
+  // Someone else signing in on the same browser gets their own look.
+  await accountMenu(page, 'Sign out');
+  await page.waitForURL(/\/login/);
+  await signIn(page, 'e2e-member', 'e2e-member-password');
+  await expect(html).toHaveAttribute('data-spacing', 'comfortable');
+  await accountMenu(page, 'Sign out');
+  await page.waitForURL(/\/login/);
+
+  // And Carol's look follows her to a fresh browser.
+  const other = await browser.newPage();
+  await signIn(other, 'new-carol', 'carols-password');
+  await expect(other.locator('html')).toHaveAttribute('data-spacing', 'compact');
+  await other.close();
+});
