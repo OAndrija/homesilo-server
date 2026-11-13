@@ -124,12 +124,21 @@ test('files and folders from the old version are all there and downloadable', as
   await expect
     .poll(() => viewer.locator('img.image').evaluate((img: HTMLImageElement) => img.naturalWidth))
     .toBe(1);
+  // Its details open beside the file, not as the list's properties dialog with Open and Download.
+  await viewer.getByRole('button', { name: 'Details', exact: true }).click();
+  const details = viewer.getByRole('complementary', { name: 'Details' });
+  await expect(details).toContainText('PNG image');
+  await expect(details.getByRole('button', { name: 'Photos' })).toBeVisible();
+  await expect(details.getByRole('button', { name: /^(Open|Download)/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Close properties' })).toHaveCount(0);
+  await details.getByRole('button', { name: 'Close details' }).click();
+  await expect(details).toBeHidden();
   await page.keyboard.press('Escape');
   await expect(viewer).toBeHidden();
 
   // The grid shows the image's own thumbnail, made by the server on request.
   await page.getByRole('radio', { name: 'Grid' }).click();
-  const tile = page.getByRole('option', { name: 'beach.png' });
+  const tile = page.getByRole('listitem', { name: 'beach.png' });
   await expect(tile).toBeVisible();
   await expect
     .poll(() => tile.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth))
