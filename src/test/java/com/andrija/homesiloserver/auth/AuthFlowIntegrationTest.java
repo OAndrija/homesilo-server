@@ -159,7 +159,6 @@ class AuthFlowIntegrationTest extends IntegrationTest {
 
     @Test
     void regularUsersCannotUseAdminEndpoints() throws Exception {
-        register(); // whoever registers first in this JVM becomes admin; make sure it isn't the next user
         Session session = register();
         mvc.perform(get("/api/v1/admin/users").cookie(session.cookie())).andExpect(status().isForbidden());
     }

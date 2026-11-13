@@ -32,8 +32,21 @@ cp .env.example .env          # set DB_PASSWORD and JWT_SECRET (openssl rand -ba
 docker compose up -d --build
 ```
 
-Open http://localhost:8080 and register. The first account is the admin; set
-`REGISTRATION_ENABLED=false` afterwards if you don't want anyone else to sign up.
+Open http://localhost:8080. A new server asks for a **setup code** before it
+creates the admin account, so nobody who finds the server before you can claim
+it. The code is printed in the server log:
+
+```bash
+docker compose logs server | grep -A3 "setup code"
+```
+
+It changes on every start until setup is done. To choose it yourself (for an
+automated install), set `SETUP_CODE` in `.env`.
+
+After that, sign-up is closed. To add people, open **Manage users → Invites**
+and make an invite link: it works once, expires after the days you pick, and
+only a hash of it is stored. Admins can also add accounts directly. Set
+`REGISTRATION_ENABLED=true` if you'd rather anyone could sign up.
 
 Data lives in two Docker volumes: `db-data` (PostgreSQL) and `storage` (file blobs).
 Back up both together.
@@ -73,7 +86,8 @@ All settings are environment variables (mapped in `application.properties`).
 | `JWT_SECRET` | — (required) | Session signing key, at least 32 characters |
 | `JWT_EXPIRATION` | `7d` | Session lifetime (`12h`, `7d`, or milliseconds) |
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
-| `REGISTRATION_ENABLED` | `true` | Allow self-registration after the first (admin) account |
+| `REGISTRATION_ENABLED` | `false` | Let anyone sign up; when off, people join with an admin's invite link |
+| `SETUP_CODE` | random, in the log | The code that creates the first admin on a new server (at least 12 letters or digits) |
 | `STORAGE_BASE_PATH` | `./data/storage` | Where blobs are stored |
 | `THUMBNAIL_PATH` | `./data/thumbnails` | Cache of image previews for the grid view; safe to delete |
 | `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |

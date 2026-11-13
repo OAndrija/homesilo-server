@@ -38,7 +38,7 @@ class ThumbnailServiceTest {
     void setUp() {
         HomesiloProperties properties = new HomesiloProperties(
                 new HomesiloProperties.Jwt("x".repeat(32), Duration.ofHours(1)),
-                new HomesiloProperties.Auth("s", false, true, 5, Duration.ofMinutes(1)),
+                new HomesiloProperties.Auth("s", false, true, 5, Duration.ofMinutes(1), ""),
                 new HomesiloProperties.Storage(dir.resolve("blobs").toString(), DataSize.ofGigabytes(1),
                         dir.resolve("thumbs").toString()),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),

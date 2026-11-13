@@ -3,6 +3,8 @@ package com.andrija.homesiloserver.auth;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.RegisterRequest;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
+import com.andrija.homesiloserver.invite.Invite;
+import com.andrija.homesiloserver.invite.InviteService;
 import com.andrija.homesiloserver.common.exception.ForbiddenException;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
@@ -21,54 +23,74 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AuthServiceTest {
 
     private final UserRepository users = mock(UserRepository.class);
     private final PasswordEncoder encoder = mock(PasswordEncoder.class);
+    private final InviteService invites = mock(InviteService.class);
 
     private AuthService service(boolean registrationEnabled) {
         HomesiloProperties properties = new HomesiloProperties(
                 new HomesiloProperties.Jwt("x".repeat(32), Duration.ofHours(1)),
-                new HomesiloProperties.Auth("homesilo_session", false, registrationEnabled, 5, Duration.ofMinutes(15)),
+                new HomesiloProperties.Auth("homesilo_session", false, registrationEnabled, 5, Duration.ofMinutes(15), ""),
                 new HomesiloProperties.Storage("target/unused", DataSize.ofGigabytes(1), "target/unused-thumbnails"),
                 new HomesiloProperties.Trash(30, "0 0 3 * * *"),
                 new HomesiloProperties.Cors(List.of()),
                 new HomesiloProperties.Activity(90));
         ActivityRecorder activity = mock(ActivityRecorder.class);
         return new AuthService(mock(AuthenticationManager.class), users, new UserService(users, encoder, activity),
-                new LoginAttemptService(properties), properties, activity);
+                new LoginAttemptService(properties), properties, activity, invites);
     }
 
     private static final RegisterRequest REQUEST = new RegisterRequest("alice", " Alice@Example.COM ", "password123");
 
     @Test
-    void firstUserBecomesAdminEvenWhenRegistrationIsClosed() {
-        when(users.count()).thenReturn(0L);
-        when(encoder.encode(anyString())).thenReturn("hash");
-        when(users.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        User user = service(false).register(REQUEST);
-
-        assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
-        assertThat(user.getEmail()).isEqualTo("alice@example.com");
-        assertThat(user.getStorageQuotaBytes()).isEqualTo(DataSize.ofGigabytes(1).toBytes());
-        assertThat(user.getLastLoginAt()).as("signing up signs you in").isNotNull();
-    }
-
-    @Test
-    void laterUsersAreRegularUsers() {
+    void anOpenServerMakesRegularUsers() {
         when(users.count()).thenReturn(3L);
         when(encoder.encode(anyString())).thenReturn("hash");
         when(users.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        assertThat(service(true).register(REQUEST).getRole()).isEqualTo(UserRole.USER);
+        User user = service(true).register(REQUEST);
+
+        assertThat(user.getRole()).isEqualTo(UserRole.USER);
+        assertThat(user.getEmail()).isEqualTo("alice@example.com");
+        assertThat(user.getStorageQuotaBytes()).isEqualTo(DataSize.ofGigabytes(1).toBytes());
+        assertThat(user.getLastLoginAt()).as("signing up signs you in").isNotNull();
+        verifyNoInteractions(invites);
     }
 
     @Test
-    void closedRegistrationRejectsEveryoneButTheFirstUser() {
+    void nobodySignsUpBeforeTheAdminIsSetUp() {
+        when(users.count()).thenReturn(0L);
+        assertThatThrownBy(() -> service(true).register(REQUEST))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("isn't set up yet");
+    }
+
+    @Test
+    void aClosedServerNeedsAnInvite() {
         when(users.count()).thenReturn(1L);
-        assertThatThrownBy(() -> service(false).register(REQUEST)).isInstanceOf(ForbiddenException.class);
+        assertThatThrownBy(() -> service(false).register(REQUEST))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("invite-only");
+    }
+
+    @Test
+    void anInviteGivesItsRoleAndIsMarkedUsed() {
+        when(users.count()).thenReturn(1L);
+        when(encoder.encode(anyString())).thenReturn("hash");
+        when(users.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        Invite invite = new Invite();
+        invite.setRole(UserRole.ADMIN);
+        when(invites.claim("token")).thenReturn(invite);
+
+        User user = service(false).register(new RegisterRequest("bob", "bob@example.com", "password123", " token "));
+
+        assertThat(user.getRole()).isEqualTo(UserRole.ADMIN);
+        verify(invites).recordUse(invite, user);
     }
 }

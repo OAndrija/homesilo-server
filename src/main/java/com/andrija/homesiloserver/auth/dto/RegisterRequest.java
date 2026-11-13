@@ -19,5 +19,13 @@ public record RegisterRequest(
 
         @NotBlank(message = "Password is required")
         @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")
-        String password
-) {}
+        String password,
+
+        /* From an invite link; needed when registration is closed. */
+        @Size(max = 128, message = "That invite link isn't valid")
+        String inviteToken
+) {
+    public RegisterRequest(String username, String email, String password) {
+        this(username, email, password, null);
+    }
+}

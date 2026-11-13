@@ -49,6 +49,7 @@ public abstract class IntegrationTest {
     }
 
     protected Session register(String username) {
+        FirstAdmin.ensureSetUp(mvc);
         try {
             MvcResult result = mvc.perform(post("/api/v1/auth/register")
                             .contentType(MediaType.APPLICATION_JSON)

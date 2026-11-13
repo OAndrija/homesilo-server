@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
  * change nothing anyone would need to trace later.
  */
 public enum ActivityAction {
+    /** newValue: who invited them, when they joined with an invite link. */
     SIGNED_UP(ActivityCategory.ACCOUNT),
     SIGNED_IN(ActivityCategory.ACCOUNT),
     /** Wrong password or disabled account; the target is the account, if it exists. */
@@ -39,7 +40,13 @@ public enum ActivityAction {
     /** By HomeSilo itself (no actor): items past the trash retention. newValue: number of items. */
     TRASH_EXPIRED(ActivityCategory.FILES),
 
+    /** The first admin created this HomeSilo with the setup code. */
+    SERVER_SET_UP(ActivityCategory.ADMIN),
     USER_CREATED(ActivityCategory.ADMIN),
+    /** targetName: the invite's note, if any. newValue: the role it gives (ADMIN or USER). */
+    INVITE_CREATED(ActivityCategory.ADMIN),
+    /** targetName: the invite's note, if any. */
+    INVITE_REVOKED(ActivityCategory.ADMIN),
     /** oldValue → newValue: ADMIN or USER. */
     USER_ROLE_CHANGED(ActivityCategory.ADMIN),
     /** oldValue → newValue: bytes. */

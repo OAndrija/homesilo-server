@@ -7,6 +7,8 @@ import com.andrija.homesiloserver.auth.dto.RegisterRequest;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ForbiddenException;
 import com.andrija.homesiloserver.common.exception.TooManyRequestsException;
+import com.andrija.homesiloserver.invite.Invite;
+import com.andrija.homesiloserver.invite.InviteService;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
@@ -35,23 +37,34 @@ public class AuthService {
     private final LoginAttemptService loginAttempts;
     private final HomesiloProperties properties;
     private final ActivityRecorder activity;
+    private final InviteService invites;
 
     /**
-     * Creates an account. The very first account becomes the administrator, so a
-     * fresh install can always be claimed even with registration disabled.
+     * Creates an account: open to anyone when registration is enabled, otherwise
+     * only with an admin's invite link. The first account (the admin) is made
+     * through {@link SetupService} instead, with the setup code.
      */
     @Transactional
     public User register(RegisterRequest request) {
-        boolean firstUser = userRepository.count() == 0;
-        if (!firstUser && !properties.auth().registrationEnabled()) {
-            throw new ForbiddenException("Registration is disabled on this server");
+        if (userRepository.count() == 0) {
+            throw new ForbiddenException("HomeSilo isn't set up yet. Create the admin account first.");
+        }
+        boolean hasInvite = request.inviteToken() != null && !request.inviteToken().isBlank();
+        if (!hasInvite && !properties.auth().registrationEnabled()) {
+            throw new ForbiddenException("Sign-up is invite-only on this server. Ask an admin for an invite link.");
         }
 
+        // Claimed in this transaction: if the account can't be made, the invite stays unused.
+        Invite invite = hasInvite ? invites.claim(request.inviteToken().trim()) : null;
         User user = userService.createAccount(request.username(), request.email(), request.password(),
-                firstUser ? UserRole.ADMIN : UserRole.USER, properties.storage().defaultQuota().toBytes(), true);
+                invite != null ? invite.getRole() : UserRole.USER,
+                properties.storage().defaultQuota().toBytes(), true);
+        if (invite != null) invites.recordUse(invite, user);
 
-        log.info("Registered user '{}' ({}) with role {}", user.getUsername(), user.getId(), user.getRole());
-        activity.recordAs(user, ActivityAction.SIGNED_UP);
+        String invitedBy = invite != null && invite.getCreatedBy() != null ? invite.getCreatedBy().getUsername() : null;
+        log.info("Registered user '{}' ({}) with role {}{}", user.getUsername(), user.getId(), user.getRole(),
+                invite != null ? " using invite " + invite.getId() : "");
+        activity.recordAs(user, ActivityAction.SIGNED_UP, invitedBy);
         return user;
     }
 
@@ -92,8 +105,7 @@ public class AuthService {
                 .orElse(null);
     }
 
-    @Transactional(readOnly = true)
     public boolean isRegistrationOpen() {
-        return properties.auth().registrationEnabled() || userRepository.count() == 0;
+        return properties.auth().registrationEnabled();
     }
 }

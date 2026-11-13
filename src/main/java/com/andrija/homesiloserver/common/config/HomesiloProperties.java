@@ -39,11 +39,23 @@ public record HomesiloProperties(
             @DefaultValue("homesilo_session") @NotBlank String cookieName,
             /* Set to true when HomeSilo is served over HTTPS. */
             @DefaultValue("false") boolean cookieSecure,
-            /* When false, only the very first account (the admin) can self-register. */
-            @DefaultValue("true") boolean registrationEnabled,
+            /* When false (the default), people join through an admin's invite link or are added by an admin. */
+            @DefaultValue("false") boolean registrationEnabled,
             @DefaultValue("5") @Positive int maxLoginAttempts,
-            @DefaultValue("15m") @NotNull Duration loginLockout
-    ) {}
+            @DefaultValue("15m") @NotNull Duration loginLockout,
+            /*
+             * The code that creates the first admin on a fresh install. Empty (the
+             * default): a random one is made at startup and printed in the server log.
+             */
+            @DefaultValue("") @Size(max = 64) String setupCode
+    ) {
+        public Auth {
+            if (!setupCode.isBlank() && setupCode.replaceAll("[^A-Za-z0-9]", "").length() < 12) {
+                throw new IllegalArgumentException(
+                        "homesilo.auth.setup-code must have at least 12 letters or digits");
+            }
+        }
+    }
 
     public record Storage(
             @NotBlank String basePath,

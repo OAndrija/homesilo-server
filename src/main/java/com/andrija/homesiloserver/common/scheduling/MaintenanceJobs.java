@@ -1,6 +1,7 @@
 package com.andrija.homesiloserver.common.scheduling;
 
 import com.andrija.homesiloserver.activity.ActivityService;
+import com.andrija.homesiloserver.invite.InviteService;
 import com.andrija.homesiloserver.storage.BlobGarbageCollector;
 import com.andrija.homesiloserver.trash.TrashService;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 
-/** Nightly housekeeping: enforce trash retention, reclaim unreferenced blobs, trim the activity log. */
+/** Nightly housekeeping: enforce trash retention, reclaim unreferenced blobs, trim the activity log, clear out old invites. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -21,6 +22,7 @@ public class MaintenanceJobs {
     private final TrashService trashService;
     private final BlobGarbageCollector blobGarbageCollector;
     private final ActivityService activityService;
+    private final InviteService inviteService;
 
     @Scheduled(cron = "${homesilo.trash.purge-cron:0 30 3 * * *}")
     public void nightly() {
@@ -38,6 +40,11 @@ public class MaintenanceJobs {
             activityService.purgeExpired();
         } catch (RuntimeException ex) {
             log.error("Activity log purge failed", ex);
+        }
+        try {
+            inviteService.deleteFinished();
+        } catch (RuntimeException ex) {
+            log.error("Old invite cleanup failed", ex);
         }
     }
 }

@@ -52,10 +52,17 @@ public class World {
 
     /** Signs up a new person; returns the account, or null when the server refused. */
     Account signUp(String name) {
+        return signUp(name, null);
+    }
+
+    /** Signs up with an invite link's secret (or without one, when null). */
+    Account signUp(String name, String inviteToken) {
+        com.andrija.homesiloserver.support.FirstAdmin.ensureSetUp(mvc);
         String username = uniqueUsername(name);
         MvcResult result = perform(post("/api/v1/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(json("username", username, "email", username + "@example.com", "password", PASSWORD)));
+                .content(json("username", username, "email", username + "@example.com", "password", PASSWORD,
+                        "inviteToken", inviteToken)));
         if (result.getResponse().getStatus() != 201) return null;
         Account account = new Account(name, username, UUID.fromString(read(result, "$.user.id")),
                 result.getResponse().getCookie("homesilo_session"));

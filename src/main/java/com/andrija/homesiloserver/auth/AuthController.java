@@ -6,6 +6,10 @@ import com.andrija.homesiloserver.auth.dto.AuthConfigResponse;
 import com.andrija.homesiloserver.auth.dto.AuthResponse;
 import com.andrija.homesiloserver.auth.dto.LoginRequest;
 import com.andrija.homesiloserver.auth.dto.RegisterRequest;
+import com.andrija.homesiloserver.auth.dto.SetupRequest;
+import com.andrija.homesiloserver.invite.InviteService;
+import com.andrija.homesiloserver.invite.dto.InvitePreviewResponse;
+import com.andrija.homesiloserver.invite.dto.InviteTokenRequest;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.dto.UserResponse;
@@ -28,13 +32,27 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final SetupService setupService;
+    private final InviteService inviteService;
     private final AuthCookies authCookies;
     private final JwtService jwtService;
     private final ActivityRecorder activity;
 
     @GetMapping("/config")
     public AuthConfigResponse config() {
-        return new AuthConfigResponse(authService.isRegistrationOpen());
+        return new AuthConfigResponse(authService.isRegistrationOpen(), setupService.isSetupRequired());
+    }
+
+    /** Creates the first admin on a fresh install, with the setup code from the server log. */
+    @PostMapping("/setup")
+    public ResponseEntity<AuthResponse> setUp(@Valid @RequestBody SetupRequest request, HttpServletRequest httpRequest) {
+        return withSession(HttpStatus.CREATED, setupService.setUp(request, httpRequest.getRemoteAddr()));
+    }
+
+    /** Whether an invite link still works, and who sent it, for the sign-up page. */
+    @PostMapping("/invites/preview")
+    public InvitePreviewResponse invite(@Valid @RequestBody InviteTokenRequest request) {
+        return inviteService.preview(request.token().trim());
     }
 
     @PostMapping("/register")
