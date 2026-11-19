@@ -196,6 +196,29 @@ test('upload, rename, folder zip download', async ({ page }) => {
   });
   await expect(row(page, 'after-upgrade.txt')).toBeVisible();
 
+  // A file over 32 MB goes in chunks, through nginx, and arrives whole.
+  const chunks: string[] = [];
+  page.on('request', (r) => {
+    if (r.method() === 'PUT' && r.url().includes('/api/v1/uploads/')) chunks.push(r.url());
+  });
+  const big = Buffer.alloc(40 * 1024 * 1024, 7);
+  big.write('start of the big file');
+  await page.setInputFiles('input[type=file]', {
+    name: 'big-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: big,
+  });
+  await expect(row(page, 'big-video.mp4')).toBeVisible({ timeout: 60_000 });
+  expect(chunks).toHaveLength(2);
+  await row(page, 'big-video.mp4').hover();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    row(page, 'big-video.mp4').getByRole('button', { name: 'Download', exact: true }).click(),
+  ]);
+  const downloaded = readFileSync((await download.path())!);
+  expect(downloaded.length).toBe(big.length);
+  expect(downloaded.equals(big)).toBe(true);
+
   await row(page, 'after-upgrade.txt').hover();
   await row(page, 'after-upgrade.txt').getByRole('button', { name: 'Rename file' }).click();
   const input = page.locator('#folderNameInput');
