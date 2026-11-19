@@ -59,6 +59,9 @@ services:
     environment:
       API_UPSTREAM: http://server:8080
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5GB}
+      # Only when another proxy (e.g. Cloudflare Tunnel) sits in front: see README.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      REAL_IP_HEADER: ${REAL_IP_HEADER:-}
     ports:
       - "${HOMESILO_PORT:-8080}:8080"
 

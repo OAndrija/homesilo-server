@@ -88,6 +88,8 @@ All settings are environment variables (mapped in `application.properties`).
 | `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
 | `REGISTRATION_ENABLED` | `false` | Let anyone sign up; when off, people join with an admin's invite link |
 | `SETUP_CODE` | random, in the log | The code that creates the first admin on a new server (at least 12 letters or digits) |
+| `TRUSTED_PROXIES` | — | Only behind another proxy (Cloudflare Tunnel, Caddy): its address or CIDR, so sign-in limits see each visitor's real address |
+| `REAL_IP_HEADER` | `X-Forwarded-For` | The header that proxy puts the real address in (`CF-Connecting-IP` for Cloudflare) |
 | `STORAGE_BASE_PATH` | `./data/storage` | Where blobs are stored |
 | `THUMBNAIL_PATH` | `./data/thumbnails` | Cache of image previews for the grid view; safe to delete |
 | `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |
