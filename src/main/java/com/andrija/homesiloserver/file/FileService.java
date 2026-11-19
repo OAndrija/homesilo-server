@@ -26,6 +26,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -54,25 +55,35 @@ public class FileService {
 
     // ── Upload ───────────────────────────────────────────────────────────────
 
+    /** A file to store: its name as the client gave it, its size, and a way to read it. */
+    public record UploadSource(String fileName, long size, InputStreamSource content) {}
+
+    /** A file sent in one multipart request. */
+    @Transactional
+    public FileMetadataResponse upload(MultipartFile file, UUID ownerId, UUID folderId) {
+        return upload(new UploadSource(file.getOriginalFilename(), file.getSize(), file), ownerId, folderId);
+    }
+
     /**
      * Stores the upload and creates a file entry for it. Uploading the same bytes
      * with the same name into the same folder again is idempotent and returns the
-     * existing entry (safe for client retries).
+     * existing entry (safe for client retries). Used for one-request uploads and
+     * for chunked ones once all their chunks are in.
      */
     @Transactional
-    public FileMetadataResponse upload(MultipartFile file, UUID ownerId, UUID folderId) {
+    public FileMetadataResponse upload(UploadSource source, UUID ownerId, UUID folderId) {
         // Locked until this upload is saved: two uploads at once can't both fit in the last of the quota.
         User owner = userService.lockForQuotaCheck(ownerId);
         Folder folder = folderId != null ? folderService.getWritable(folderId, ownerId) : null;
-        String name = sanitizeFileName(file.getOriginalFilename());
+        String name = sanitizeFileName(source.fileName());
 
         long used = fileRepository.sumSizeByOwnerId(ownerId);
-        if (used + file.getSize() > owner.getStorageQuotaBytes()) {
+        if (used + source.size() > owner.getStorageQuotaBytes()) {
             throw new QuotaExceededException("Not enough storage space left for '" + name + "'");
         }
 
         StoredBlob blob;
-        try (InputStream in = file.getInputStream()) {
+        try (InputStream in = source.content().getInputStream()) {
             blob = blobStorage.store(ownerId, in);
         } catch (IOException ex) {
             throw new StorageException("Could not read upload", ex);
@@ -281,7 +292,7 @@ public class FileService {
     }
 
     /** Strips any client-supplied path and characters that are invalid in a file name. */
-    static String sanitizeFileName(String original) {
+    public static String sanitizeFileName(String original) {
         if (original == null) return "unnamed";
         String name = original.replace('\\', '/');
         name = name.substring(name.lastIndexOf('/') + 1);
