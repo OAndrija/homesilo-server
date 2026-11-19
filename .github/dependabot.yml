@@ -25,6 +25,15 @@ updates:
     schedule:
       interval: weekly
 
+  # Postgres, cloudflared and Caddy in the install files.
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+    ignore:
+      # HomeSilo's own images follow HOMESILO_VERSION, not Dependabot.
+      - dependency-name: "ghcr.io/oandrija/*"
+
   - package-ecosystem: github-actions
     directory: /
     schedule:

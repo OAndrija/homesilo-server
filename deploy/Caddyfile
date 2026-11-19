@@ -1,0 +1,17 @@
+# Used by compose.caddy.yml. Caddy gets a certificate for this domain on first
+# start and renews it by itself.
+{$HOMESILO_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		# Tell browsers to always use HTTPS here, for the next two years.
+		Strict-Transport-Security "max-age=63072000; includeSubDomains"
+		-Server
+	}
+
+	request_body {
+		max_size {$MAX_UPLOAD_SIZE}
+	}
+
+	reverse_proxy client:8080
+}

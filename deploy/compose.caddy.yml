@@ -1,0 +1,38 @@
+# Serve HomeSilo on your own domain with Caddy, which gets and renews the HTTPS
+# certificate by itself. Needs ports 80 and 443 forwarded to this machine and
+# the domain pointing at your public IP. Set HOMESILO_DOMAIN in .env, then:
+#
+#   docker compose -f docker-compose.yml -f compose.caddy.yml up -d
+
+services:
+  caddy:
+    image: caddy:2.11-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      HOMESILO_DOMAIN: ${HOMESILO_DOMAIN:?Set HOMESILO_DOMAIN in .env}
+      MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5GB}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - client
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  client:
+    environment:
+      # Caddy replaces X-Forwarded-For with the visitor's address; trust it, and only it.
+      TRUSTED_PROXIES: ${HOMESILO_SUBNET:-172.30.80.0/24}
+      REAL_IP_HEADER: X-Forwarded-For
+
+volumes:
+  caddy-data:
+  caddy-config:

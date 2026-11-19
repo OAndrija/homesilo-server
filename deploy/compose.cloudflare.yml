@@ -1,0 +1,28 @@
+# Reach HomeSilo through a Cloudflare Tunnel: no open ports at home, HTTPS by
+# Cloudflare. Set TUNNEL_TOKEN in .env, then:
+#
+#   docker compose -f docker-compose.yml -f compose.cloudflare.yml up -d
+#
+# In the tunnel's public hostname settings, point your domain at http://client:8080.
+
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:2026.10.7
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:?Set TUNNEL_TOKEN in .env (Zero Trust → Networks → Tunnels)}
+    depends_on:
+      - client
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
+  client:
+    environment:
+      # Every request arrives from cloudflared; the visitor's address is in
+      # CF-Connecting-IP. Trusting only HomeSilo's own network keeps it unforgeable.
+      TRUSTED_PROXIES: ${HOMESILO_SUBNET:-172.30.80.0/24}
+      REAL_IP_HEADER: CF-Connecting-IP
