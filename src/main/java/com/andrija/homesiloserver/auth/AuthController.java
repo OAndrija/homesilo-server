@@ -10,6 +10,7 @@ import com.andrija.homesiloserver.auth.dto.SetupRequest;
 import com.andrija.homesiloserver.invite.InviteService;
 import com.andrija.homesiloserver.invite.dto.InvitePreviewResponse;
 import com.andrija.homesiloserver.invite.dto.InviteTokenRequest;
+import com.andrija.homesiloserver.security.JwtAuthenticationFilter;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.dto.UserResponse;
@@ -32,6 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final SessionService sessionService;
     private final SetupService setupService;
     private final InviteService inviteService;
     private final AuthCookies authCookies;
@@ -68,8 +70,11 @@ public class AuthController {
         return withSession(HttpStatus.OK, authService.login(request, httpRequest.getRemoteAddr()));
     }
 
+    /** Ends this session on the server too, so a copy of its cookie stops working. */
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@AuthenticationPrincipal ServerUserDetails principal) {
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal ServerUserDetails principal,
+                                       HttpServletRequest request) {
+        sessionService.end(JwtAuthenticationFilter.sessionToken(request, authCookies));
         if (principal != null) activity.recordAs(principal.getUser(), ActivityAction.SIGNED_OUT);
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookies.clearedCookie().toString())

@@ -17,6 +17,8 @@ public enum ActivityAction {
     /** Refused because of too many recent failures. */
     SIGN_IN_BLOCKED(ActivityCategory.ACCOUNT),
     SIGNED_OUT(ActivityCategory.ACCOUNT),
+    /** Signed out of every other device. */
+    SESSIONS_REVOKED(ActivityCategory.ACCOUNT),
     PASSWORD_CHANGED(ActivityCategory.ACCOUNT),
 
     /** newValue: size in bytes. */

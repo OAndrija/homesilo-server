@@ -61,7 +61,8 @@ public class FileService {
      */
     @Transactional
     public FileMetadataResponse upload(MultipartFile file, UUID ownerId, UUID folderId) {
-        User owner = userService.getEntity(ownerId);
+        // Locked until this upload is saved: two uploads at once can't both fit in the last of the quota.
+        User owner = userService.lockForQuotaCheck(ownerId);
         Folder folder = folderId != null ? folderService.getWritable(folderId, ownerId) : null;
         String name = sanitizeFileName(file.getOriginalFilename());
 

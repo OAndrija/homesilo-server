@@ -41,13 +41,18 @@ public record HomesiloProperties(
             @DefaultValue("false") boolean cookieSecure,
             /* When false (the default), people join through an admin's invite link or are added by an admin. */
             @DefaultValue("false") boolean registrationEnabled,
+            /* Failed sign-ins for one account from one address before a lockout. */
             @DefaultValue("5") @Positive int maxLoginAttempts,
             @DefaultValue("15m") @NotNull Duration loginLockout,
             /*
              * The code that creates the first admin on a fresh install. Empty (the
              * default): a random one is made at startup and printed in the server log.
              */
-            @DefaultValue("") @Size(max = 64) String setupCode
+            @DefaultValue("") @Size(max = 64) String setupCode,
+            /* Failed sign-ins from one address, whatever the account (password spraying). */
+            @DefaultValue("20") @Positive int maxFailuresPerAddress,
+            /* Failed sign-ins for one account, whatever the address (distributed guessing). */
+            @DefaultValue("30") @Positive int maxFailuresPerAccount
     ) {
         public Auth {
             if (!setupCode.isBlank() && setupCode.replaceAll("[^A-Za-z0-9]", "").length() < 12) {

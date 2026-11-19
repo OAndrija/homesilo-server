@@ -159,6 +159,8 @@ public class FileController {
         return ResponseEntity.ok()
                 .contentType(parseMediaType(content.contentType()))
                 .header(HttpHeaders.CONTENT_DISPOSITION, disposition(ContentDisposition.attachment(), content.fileName()))
+                // Should a browser ever show a download rather than save it, nothing in it can run.
+                .header("Content-Security-Policy", "sandbox; default-src 'none'")
                 .body(content.resource());
     }
 
@@ -174,7 +176,9 @@ public class FileController {
             @AuthenticationPrincipal ServerUserDetails principal
     ) {
         FileContent content = fileService.getContent(fileId, principal.getId());
-        String type = content.contentType().toLowerCase(Locale.ROOT);
+        // Compared without parameters, so "image/svg+xml; charset=utf-8" is still SVG.
+        MediaType stored = parseMediaType(content.contentType());
+        String type = (stored.getType() + "/" + stored.getSubtype()).toLowerCase(Locale.ROOT);
 
         MediaType servedAs;
         ContentDisposition.Builder disposition = ContentDisposition.inline();

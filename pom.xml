@@ -62,6 +62,12 @@
         </dependency>
 
         <!-- JWT -->
+        <!-- Argon2id password hashing (Spring Security's Argon2PasswordEncoder needs it). -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.81</version>
+        </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>

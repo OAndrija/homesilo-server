@@ -21,6 +21,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ public class AuthService {
     private final HomesiloProperties properties;
     private final ActivityRecorder activity;
     private final InviteService invites;
+    private final PasswordEncoder passwordEncoder;
 
     /**
      * Creates an account: open to anyone when registration is enabled, otherwise
@@ -91,8 +93,18 @@ public class AuthService {
                     findAccount(request.username()), "wrong password");
             throw ex;
         } catch (DisabledException ex) {
-            activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(),
-                    findAccount(request.username()), "account disabled");
+            // Spring checks "disabled" before the password, which would tell anyone an
+            // account exists. Only someone with the right password learns it's disabled.
+            User account = findAccount(request.username());
+            if (account == null || !passwordEncoder.matches(request.password(), account.getPassword())) {
+                loginAttempts.recordFailure(request.username(), clientAddress);
+                log.warn("Failed sign-in for '{}' from {}", request.username(), clientAddress);
+                activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(), account,
+                        "wrong password");
+                throw new BadCredentialsException("Bad credentials");
+            }
+            activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(), account,
+                    "account disabled");
             throw ex;
         }
     }
