@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.andrija</groupId>
     <artifactId>homesilo-server</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>homesilo-server</name>
     <description>HomeSilo - self-hosted personal cloud storage (REST API)</description>
     <url>https://github.com/OAndrija/homesilo-server</url>
@@ -202,6 +202,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- Puts the version in the jar, so admins can see which release is running. -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
                 <configuration>
                     <excludes>
                         <exclude>
