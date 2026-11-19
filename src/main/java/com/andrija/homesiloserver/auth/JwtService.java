@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,7 +27,12 @@ public class JwtService {
     private final Duration expiration;
 
     public JwtService(HomesiloProperties properties) {
-        this.signingKey = Keys.hmacShaKeyFor(properties.jwt().secret().getBytes(StandardCharsets.UTF_8));
+        String secret = properties.jwt().secret();
+        if (secret == null || secret.isBlank()) {
+            secret = GeneratedSecret.loadOrCreate(Path.of(properties.storage().basePath()).resolve(".secrets"),
+                    "jwt-secret");
+        }
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiration = properties.jwt().expiration();
     }
 

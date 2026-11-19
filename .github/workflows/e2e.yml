@@ -18,7 +18,6 @@ env:
   # Last commit before the Flyway / cookie-auth rewrite: the "old version" users upgrade from.
   LEGACY_SHA: 0cae3dd585bd35d399d974f400ca6453337b5119
   DB_PASSWORD: e2e-db-password
-  JWT_SECRET: e2e-jwt-secret-that-is-comfortably-longer-than-32-bytes
   COMPOSE: docker compose -f docker-compose.yml -f e2e/docker-compose.e2e.yml
 
 jobs:

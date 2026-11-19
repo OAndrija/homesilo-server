@@ -6,6 +6,8 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Duration;
 
@@ -19,7 +21,8 @@ public class AuthCookies {
 
     private final JwtService jwtService;
     private final String cookieName;
-    private final boolean secure;
+    /** Null: decided per request, by whether it came over HTTPS. */
+    private final Boolean secure;
 
     public AuthCookies(JwtService jwtService, HomesiloProperties properties) {
         this.jwtService = jwtService;
@@ -53,8 +56,14 @@ public class AuthCookies {
     private ResponseCookie.ResponseCookieBuilder baseCookie(String value) {
         return ResponseCookie.from(cookieName, value)
                 .httpOnly(true)
-                .secure(secure)
+                .secure(secure != null ? secure : cameOverHttps())
                 .sameSite("Lax")
                 .path("/");
+    }
+
+    /** Behind a proxy, Tomcat takes this from X-Forwarded-Proto (server.forward-headers-strategy). */
+    private static boolean cameOverHttps() {
+        return RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes
+                && attributes.getRequest().isSecure();
     }
 }

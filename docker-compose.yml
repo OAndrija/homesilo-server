@@ -1,6 +1,6 @@
 # Full HomeSilo stack: PostgreSQL + API + web UI (nginx).
 #
-#   cp .env.example .env      # then set DB_PASSWORD and JWT_SECRET
+#   cp .env.example .env      # then set DB_PASSWORD
 #   docker compose up -d --build
 #
 # Expects the client repository checked out next to this one (../homesilo-client).
@@ -34,9 +34,9 @@ services:
       DB_URL: jdbc:postgresql://db:5432/homesilo
       DB_USERNAME: homesilo
       DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (at least 32 characters)}
+      JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
       SETUP_CODE: ${SETUP_CODE:-}
       DEFAULT_QUOTA: ${DEFAULT_QUOTA:-100GB}

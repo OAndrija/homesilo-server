@@ -56,6 +56,19 @@ class SecurityHardeningIntegrationTest extends IntegrationTest {
         login(user.username(), PASSWORD).andExpect(status().isOk());
     }
 
+    @Test
+    void sessionCookiesAreSecureWhenTheRequestCameOverHttps() throws Exception {
+        Session user = register();
+        String overHttps = mvc.perform(post("/api/v1/auth/login").secure(true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json("username", user.username(), "password", PASSWORD)))
+                .andExpect(status().isOk()).andReturn().getResponse().getHeader("Set-Cookie");
+        String overHttp = login(user.username(), PASSWORD).andReturn().getResponse().getHeader("Set-Cookie");
+
+        assertThat(overHttps).contains("Secure").contains("HttpOnly").contains("SameSite=Lax");
+        assertThat(overHttp).doesNotContain("Secure").contains("HttpOnly");
+    }
+
     // ── Disabled accounts ────────────────────────────────────────────────────
 
     @Test

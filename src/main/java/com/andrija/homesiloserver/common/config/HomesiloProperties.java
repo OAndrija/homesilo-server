@@ -30,15 +30,28 @@ public record HomesiloProperties(
 ) {
 
     public record Jwt(
-            /* HMAC signing key; at least 32 bytes (256 bits). */
-            @NotBlank @Size(min = 32, message = "homesilo.jwt.secret must be at least 32 characters") String secret,
+            /*
+             * HMAC key for session tokens, at least 32 characters. Empty (the default):
+             * one is generated on first start and kept with the stored files.
+             */
+            @DefaultValue("") String secret,
             @DefaultValue("7d") @NotNull Duration expiration
-    ) {}
+    ) {
+        public Jwt {
+            if (secret != null && !secret.isBlank() && secret.length() < 32) {
+                throw new IllegalArgumentException("homesilo.jwt.secret must be at least 32 characters, "
+                        + "or left empty to have one generated");
+            }
+        }
+    }
 
     public record Auth(
             @DefaultValue("homesilo_session") @NotBlank String cookieName,
-            /* Set to true when HomeSilo is served over HTTPS. */
-            @DefaultValue("false") boolean cookieSecure,
+            /*
+             * Whether session cookies need HTTPS. Unset (the default): yes when the
+             * request came over HTTPS, as a proxy in front reports with X-Forwarded-Proto.
+             */
+            Boolean cookieSecure,
             /* When false (the default), people join through an admin's invite link or are added by an admin. */
             @DefaultValue("false") boolean registrationEnabled,
             /* Failed sign-ins for one account from one address before a lockout. */
