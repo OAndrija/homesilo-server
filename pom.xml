@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.6</version>
+        <version>4.0.9</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.andrija</groupId>
@@ -20,7 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <jjwt.version>0.12.6</jjwt.version>
-        <tika.version>2.9.2</tika.version>
+        <tika.version>3.3.0</tika.version>
         <cucumber.version>8.0.4</cucumber.version>
         <twelvemonkeys.version>3.15.3</twelvemonkeys.version>
         <pdfbox.version>3.0.8</pdfbox.version>
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.81</version>
+            <version>1.85</version>
         </dependency>
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
