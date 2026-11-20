@@ -3,7 +3,7 @@
 # ── Build ─────────────────────────────────────────────────────────────────────
 # Runs on the machine doing the build, whatever the target: the jar is the same everywhere,
 # and building it under arm64 emulation would be slow.
-FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-21 AS build
+FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-26 AS build
 WORKDIR /build
 COPY pom.xml .
 RUN --mount=type=cache,target=/root/.m2 mvn -B -q dependency:go-offline
