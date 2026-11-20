@@ -8,7 +8,7 @@ thousands of blobs named after their checksums.
 ## What HomeSilo does on its own
 
 Every night at 02:00 the server dumps the database into the `homesilo_backups`
-volume and keeps the last seven. **Manage users → Settings** shows when the
+volume and keeps the last seven. The **Server** page shows when the
 last one ran and whether it worked, and has a button to make one now. If a
 nightly backup fails, it also shows up in the activity log.
 

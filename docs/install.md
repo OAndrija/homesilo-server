@@ -65,9 +65,14 @@ doesn't work, look at the log again.
 
 ## 5. Invite people
 
-Sign-up is closed by default. To add someone, go to **Manage users → Invites →
-Invite someone** and send them the link. Each link works once, for the number
-of days you choose. You can also create accounts directly with **Add user**.
+Sign-up is closed by default. To add someone, open **Users** in the sidebar,
+choose **Invite someone** and send them the link. Each link works once, for the
+number of days you choose. You can also create accounts directly with **Add
+user**.
+
+If you'd rather let anyone who can reach the site sign up, turn that on in
+**Server**. The same page sets how much storage new accounts get and how long
+the trash and the activity log are kept.
 
 ## Where everything is
 

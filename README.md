@@ -43,10 +43,10 @@ docker compose logs server | grep -A3 "setup code"
 It changes on every start until setup is done. To choose it yourself (for an
 automated install), set `SETUP_CODE` in `.env`.
 
-After that, sign-up is closed. To add people, open **Manage users → Invites**
-and make an invite link: it works once, expires after the days you pick, and
-only a hash of it is stored. Admins can also add accounts directly. Set
-`REGISTRATION_ENABLED=true` if you'd rather anyone could sign up.
+After that, sign-up is closed. To add people, open **Users** and make an invite
+link: it works once, expires after the days you pick, and only a hash of it is
+stored. Admins can also add accounts directly, or open sign-up to everyone on
+the **Server** page.
 
 Data lives in two Docker volumes: `db-data` (PostgreSQL) and `storage` (file blobs).
 Back up both together.
