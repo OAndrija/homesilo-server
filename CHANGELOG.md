@@ -7,7 +7,7 @@ major number means something you need to read before upgrading.
 
 ## [Unreleased]
 
-The first public release.
+The first public release, under the GNU AGPL v3.
 
 ### What's in it
 

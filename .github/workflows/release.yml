@@ -82,6 +82,7 @@ jobs:
             type=raw,value=latest
           labels: |
             org.opencontainers.image.title=HomeSilo server
+            org.opencontainers.image.licenses=AGPL-3.0-only
             org.opencontainers.image.description=The API and storage behind HomeSilo, a self-hosted file drive
 
       # Scanned before anything is published: a known, fixable, serious vulnerability stops the release.

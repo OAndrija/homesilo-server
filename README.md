@@ -172,3 +172,10 @@ every endpoint needs a session.
 | `trash` | `DELETE` (empty it) |
 | `dashboard` | `GET stats`, `GET`/`PUT`/`DELETE layout` |
 | `admin` | `GET overview`, `users` (`GET`, `POST`, `PATCH`, `DELETE`, `PUT {id}/password`), `invites` (`GET`, `POST`, `DELETE`), `GET`/`PATCH settings`, `GET`/`POST backups`, `GET activity` |
+
+## Licence
+
+HomeSilo is free software under the [GNU AGPL v3](LICENSE). You can use it,
+change it and share it. If you run a changed version for other people over a
+network, you have to offer them your source as well; the Settings page links to
+the source for that reason, so keep a link like it in a fork.
