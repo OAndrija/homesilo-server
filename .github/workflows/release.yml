@@ -113,7 +113,7 @@ jobs:
           sbom: true
           provenance: mode=max
 
-      - uses: actions/attest-build-provenance@v2
+      - uses: actions/attest-build-provenance@v4
         if: github.ref_type == 'tag'
         with:
           subject-name: ${{ env.IMAGE }}
