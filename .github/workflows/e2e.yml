@@ -209,9 +209,12 @@ jobs:
       - name: A backup can be made, with the image's pg_dump against PostgreSQL 17
         working-directory: homesilo-server/deploy
         run: |
-          # Both cookies are marked Secure, so curl only sends them over https; send them by hand.
+          # The session cookie is marked Secure, so curl only sends it over https; send it by hand.
           session=$(awk '$6 == "homesilo_session" { print $7 }' ../../cookies.txt)
-          xsrf=$(awk '$6 == "XSRF-TOKEN" { print $7 }' ../../cookies.txt)
+          # Signing in replaces the CSRF token, and the next request hands out the new one, as the app would see it.
+          xsrf=$(curl -fsS -o /dev/null -D - -H "Cookie: homesilo_session=$session" -H 'X-Forwarded-Proto: https' \
+            http://localhost:8080/api/v1/users/me | sed -n 's/^[Ss]et-[Cc]ookie: XSRF-TOKEN=\([^;]*\).*/\1/p' | tr -d '\r')
+          [ -n "$xsrf" ]
           curl -fsS -X POST -H "Cookie: homesilo_session=$session; XSRF-TOKEN=$xsrf" -H "X-XSRF-TOKEN: $xsrf" \
             http://localhost:8080/api/v1/admin/backups | tee backup.json
           grep -q '"lastError":null' backup.json
