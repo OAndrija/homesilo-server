@@ -37,6 +37,9 @@ services:
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      BACKUP_CRON: ${BACKUP_CRON:-0 0 2 * * *}
       REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
       SETUP_CODE: ${SETUP_CODE:-}
       DEFAULT_QUOTA: ${DEFAULT_QUOTA:-100GB}
@@ -49,6 +52,7 @@ services:
       - storage:/data/storage
       # A cache of image previews; deleting it is safe, they are made again.
       - thumbnails:/data/thumbnails
+      - backups:/data/backups
 
   client:
     build: ../homesilo-client
@@ -69,3 +73,4 @@ volumes:
   db-data:
   storage:
   thumbnails:
+  backups:

@@ -53,10 +53,15 @@ services:
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-30}
       JWT_SECRET: ${JWT_SECRET:-}
       COOKIE_SECURE: ${COOKIE_SECURE:-}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      BACKUP_CRON: ${BACKUP_CRON:-0 0 2 * * *}
     volumes:
       - files:/data/storage
       # Previews of images and documents. Safe to delete; they're made again.
       - thumbnails:/data/thumbnails
+      # Nightly database backups. See docs/backups.md for copying them off this machine.
+      - backups:/data/backups
     logging: *logging
 
   client:
@@ -88,3 +93,4 @@ volumes:
   db:
   files:
   thumbnails:
+  backups:

@@ -14,15 +14,17 @@ RUN --mount=type=cache,target=/root/.m2 mvn -B -q -DskipTests package \
 # ── Runtime ───────────────────────────────────────────────────────────────────
 FROM eclipse-temurin:21-jre-alpine
 # Fonts: the slim JRE has none, and document thumbnails draw text (PDFs, Word, notes).
-RUN apk add --no-cache fontconfig ttf-dejavu \
+# pg_dump for the nightly backups, matching the PostgreSQL 17 the install files use.
+RUN apk add --no-cache fontconfig ttf-dejavu postgresql17-client \
     && addgroup -S homesilo && adduser -S -G homesilo homesilo \
-    && mkdir -p /data/storage /data/thumbnails && chown -R homesilo:homesilo /data
+    && mkdir -p /data/storage /data/thumbnails /data/backups && chown -R homesilo:homesilo /data
 WORKDIR /app
 COPY --from=build /build/app.jar app.jar
 
 USER homesilo
 ENV STORAGE_BASE_PATH=/data/storage \
     THUMBNAIL_PATH=/data/thumbnails \
+    BACKUP_PATH=/data/backups \
     JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
 VOLUME /data
 EXPOSE 8080

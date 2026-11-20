@@ -206,6 +206,19 @@ jobs:
         run: |
           docker compose exec -T server sh -c 'ls -l /data/storage/.secrets/jwt-secret && test "$(stat -c %a /data/storage/.secrets/jwt-secret)" = 600'
 
+      - name: A backup can be made, with the image's pg_dump against PostgreSQL 17
+        working-directory: homesilo-server/deploy
+        run: |
+          # Both cookies are marked Secure, so curl only sends them over https; send them by hand.
+          session=$(awk '$6 == "homesilo_session" { print $7 }' ../../cookies.txt)
+          xsrf=$(awk '$6 == "XSRF-TOKEN" { print $7 }' ../../cookies.txt)
+          curl -fsS -X POST -H "Cookie: homesilo_session=$session; XSRF-TOKEN=$xsrf" -H "X-XSRF-TOKEN: $xsrf" \
+            http://localhost:8080/api/v1/admin/backups | tee backup.json
+          grep -q '"lastError":null' backup.json
+          docker compose exec -T server sh -c 'ls -l /data/backups && ls /data/backups/homesilo-*.dump'
+          # It's a real dump: pg_restore can read its table of contents.
+          docker compose exec -T server sh -c 'pg_restore --list /data/backups/homesilo-*.dump | grep -q "TABLE public users"'
+
       - name: Sessions survive a restart
         working-directory: homesilo-server/deploy
         run: |
