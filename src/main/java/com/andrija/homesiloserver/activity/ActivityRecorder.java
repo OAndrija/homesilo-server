@@ -42,7 +42,13 @@ public class ActivityRecorder {
 
     /** By a specific account, for moments when nobody is signed in yet (sign-up, sign-in). */
     public void recordAs(User actor, ActivityAction action) {
-        publish(actor.getId(), actor.getUsername(), action, TargetType.USER, actor.getId(), actor.getUsername(), null, null);
+        recordAs(actor, action, null);
+    }
+
+    /** By a specific account, with a value (e.g. who invited them). */
+    public void recordAs(User actor, ActivityAction action, String newValue) {
+        publish(actor.getId(), actor.getUsername(), action, TargetType.USER, actor.getId(), actor.getUsername(),
+                null, newValue);
     }
 
     /** A sign-in that didn't succeed. {@code account} is the account it was for, if it exists. */

@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
  * change nothing anyone would need to trace later.
  */
 public enum ActivityAction {
+    /** newValue: who invited them, when they joined with an invite link. */
     SIGNED_UP(ActivityCategory.ACCOUNT),
     SIGNED_IN(ActivityCategory.ACCOUNT),
     /** Wrong password or disabled account; the target is the account, if it exists. */
@@ -16,6 +17,8 @@ public enum ActivityAction {
     /** Refused because of too many recent failures. */
     SIGN_IN_BLOCKED(ActivityCategory.ACCOUNT),
     SIGNED_OUT(ActivityCategory.ACCOUNT),
+    /** Signed out of every other device. */
+    SESSIONS_REVOKED(ActivityCategory.ACCOUNT),
     PASSWORD_CHANGED(ActivityCategory.ACCOUNT),
 
     /** newValue: size in bytes. */
@@ -39,7 +42,19 @@ public enum ActivityAction {
     /** By HomeSilo itself (no actor): items past the trash retention. newValue: number of items. */
     TRASH_EXPIRED(ActivityCategory.FILES),
 
+    /** An admin changed a server setting. targetName: which; oldValue and newValue as stored. */
+    SETTING_CHANGED(ActivityCategory.ADMIN),
+    /** The nightly database backup didn't work. newValue: why. */
+    BACKUP_FAILED(ActivityCategory.ADMIN),
+    /** An admin made a database backup by hand. newValue: the backup's file name. */
+    BACKUP_CREATED(ActivityCategory.ADMIN),
+    /** The first admin created this HomeSilo with the setup code. */
+    SERVER_SET_UP(ActivityCategory.ADMIN),
     USER_CREATED(ActivityCategory.ADMIN),
+    /** targetName: the invite's note, if any. newValue: the role it gives (ADMIN or USER). */
+    INVITE_CREATED(ActivityCategory.ADMIN),
+    /** targetName: the invite's note, if any. */
+    INVITE_REVOKED(ActivityCategory.ADMIN),
     /** oldValue → newValue: ADMIN or USER. */
     USER_ROLE_CHANGED(ActivityCategory.ADMIN),
     /** oldValue → newValue: bytes. */

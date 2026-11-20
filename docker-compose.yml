@@ -1,6 +1,6 @@
 # Full HomeSilo stack: PostgreSQL + API + web UI (nginx).
 #
-#   cp .env.example .env      # then set DB_PASSWORD and JWT_SECRET
+#   cp .env.example .env      # then set DB_PASSWORD
 #   docker compose up -d --build
 #
 # Expects the client repository checked out next to this one (../homesilo-client).
@@ -34,10 +34,14 @@ services:
       DB_URL: jdbc:postgresql://db:5432/homesilo
       DB_USERNAME: homesilo
       DB_PASSWORD: ${DB_PASSWORD}
-      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env (at least 32 characters)}
+      JWT_SECRET: ${JWT_SECRET:-}
       JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
-      COOKIE_SECURE: ${COOKIE_SECURE:-false}
-      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-true}
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
+      BACKUP_ENABLED: ${BACKUP_ENABLED:-true}
+      BACKUP_KEEP: ${BACKUP_KEEP:-7}
+      BACKUP_CRON: ${BACKUP_CRON:-0 0 2 * * *}
+      REGISTRATION_ENABLED: ${REGISTRATION_ENABLED:-false}
+      SETUP_CODE: ${SETUP_CODE:-}
       DEFAULT_QUOTA: ${DEFAULT_QUOTA:-100GB}
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5GB}
       TRASH_RETENTION_DAYS: ${TRASH_RETENTION_DAYS:-30}
@@ -48,6 +52,7 @@ services:
       - storage:/data/storage
       # A cache of image previews; deleting it is safe, they are made again.
       - thumbnails:/data/thumbnails
+      - backups:/data/backups
 
   client:
     build: ../homesilo-client
@@ -58,6 +63,9 @@ services:
     environment:
       API_UPSTREAM: http://server:8080
       MAX_UPLOAD_SIZE: ${MAX_UPLOAD_SIZE:-5GB}
+      # Only when another proxy (e.g. Cloudflare Tunnel) sits in front: see README.
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}
+      REAL_IP_HEADER: ${REAL_IP_HEADER:-}
     ports:
       - "${HOMESILO_PORT:-8080}:8080"
 
@@ -65,3 +73,4 @@ volumes:
   db-data:
   storage:
   thumbnails:
+  backups:

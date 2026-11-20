@@ -1,6 +1,7 @@
 package com.andrija.homesiloserver.user;
 
 import com.andrija.homesiloserver.auth.AuthCookies;
+import com.andrija.homesiloserver.auth.SessionService;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.dto.ChangePasswordRequest;
 import com.andrija.homesiloserver.user.dto.UserResponse;
@@ -10,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,6 +25,7 @@ public class UserController {
 
     private final UserService userService;
     private final AuthCookies authCookies;
+    private final SessionService sessionService;
 
     @GetMapping("/me")
     public UserResponse getCurrentUser(@AuthenticationPrincipal ServerUserDetails principal) {
@@ -36,6 +39,18 @@ public class UserController {
             @AuthenticationPrincipal ServerUserDetails principal
     ) {
         User user = userService.changePassword(principal.getId(), request);
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, authCookies.sessionCookie(user).toString())
+                .build();
+    }
+
+    /**
+     * Signs out every other device (a lost phone, a shared computer). This one
+     * gets a new session cookie and stays signed in.
+     */
+    @PostMapping("/me/sessions/sign-out-others")
+    public ResponseEntity<Void> signOutOtherSessions(@AuthenticationPrincipal ServerUserDetails principal) {
+        User user = sessionService.endOtherSessions(principal.getId());
         return ResponseEntity.noContent()
                 .header(HttpHeaders.SET_COOKIE, authCookies.sessionCookie(user).toString())
                 .build();

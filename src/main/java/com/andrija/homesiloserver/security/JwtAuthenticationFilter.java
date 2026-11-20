@@ -2,6 +2,7 @@ package com.andrija.homesiloserver.security;
 
 import com.andrija.homesiloserver.auth.AuthCookies;
 import com.andrija.homesiloserver.auth.JwtService;
+import com.andrija.homesiloserver.auth.RevokedSessionRepository;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
 import jakarta.servlet.FilterChain;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
@@ -36,6 +38,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final AuthCookies authCookies;
     private final UserRepository userRepository;
+    private final RevokedSessionRepository revokedSessions;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -44,6 +47,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             jwtService.parse(token)
+                    .filter(claims -> claims.tokenId() == null || !revokedSessions.existsById(claims.tokenId()))
                     .flatMap(claims -> userRepository.findById(claims.userId())
                             .filter(User::isEnabled)
                             .filter(user -> !isRevoked(user, claims.issuedAt())))
@@ -59,10 +63,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
-    /** A token is revoked if it was issued before the user's last password change (JWT iat has second precision). */
+    /**
+     * A token is revoked if it was issued before the user's last password change
+     * or "sign out of other devices" (JWT iat has second precision).
+     */
     private static boolean isRevoked(User user, Instant issuedAt) {
-        if (user.getPasswordChangedAt() == null) return false;
-        Instant changedAt = user.getPasswordChangedAt()
+        LocalDateTime validFrom = user.sessionsValidFrom();
+        if (validFrom == null) return false;
+        Instant changedAt = validFrom
                 .atZone(ZoneId.systemDefault())
                 .toInstant()
                 .truncatedTo(ChronoUnit.SECONDS);
@@ -70,6 +78,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     private String resolveToken(HttpServletRequest request) {
+        return sessionToken(request, authCookies);
+    }
+
+    /** The session token a request carries: a bearer header first, else the session cookie. */
+    public static String sessionToken(HttpServletRequest request, AuthCookies authCookies) {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(BEARER_PREFIX)) {
             return header.substring(BEARER_PREFIX.length());

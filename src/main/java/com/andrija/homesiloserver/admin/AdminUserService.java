@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.admin;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.TargetType;
@@ -21,6 +22,8 @@ import com.andrija.homesiloserver.user.UserRepository;
 import com.andrija.homesiloserver.user.UserRole;
 import com.andrija.homesiloserver.user.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.info.BuildProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
@@ -55,15 +58,18 @@ public class AdminUserService {
             "username", "email", "role", "enabled", "createdAt", "lastLoginAt", "storageQuotaBytes");
 
     private final UserRepository userRepository;
+    private final ObjectProvider<BuildProperties> buildProperties;
     private final UserService userService;
     private final FileMetadataRepository fileRepository;
     private final FolderRepository folderRepository;
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
     private final ActivityRecorder activity;
 
     public AdminOverviewResponse overview() {
+        BuildProperties build = buildProperties.getIfAvailable();
         return new AdminOverviewResponse(
                 userRepository.count(),
                 userRepository.countByEnabledTrue(),
@@ -71,11 +77,12 @@ public class AdminUserService {
                 fileRepository.sumAllSizes(),
                 userRepository.sumStorageQuotaBytes(),
                 fileRepository.countByTrashedFalse(),
-                properties.storage().defaultQuota().toBytes(),
-                properties.auth().registrationEnabled(),
+                settings.defaultQuotaBytes(),
+                settings.registrationOpen(),
                 fileRepository.topUsage(PageRequest.of(0, 5)).stream()
                         .map(u -> new AdminOverviewResponse.StorageByUser(u.getOwnerId(), u.getUsername(), u.getBytes()))
-                        .toList());
+                        .toList(),
+                build != null ? build.getVersion() : "dev");
     }
 
     public PageResponse<AdminUserResponse> list(String query, UserRole role, AccountStatus status, Pageable pageable) {
@@ -99,7 +106,7 @@ public class AdminUserService {
     public AdminUserResponse create(UUID actingAdminId, CreateUserRequest request) {
         long quota = request.storageQuotaBytes() != null
                 ? request.storageQuotaBytes()
-                : properties.storage().defaultQuota().toBytes();
+                : settings.defaultQuotaBytes();
         User user = userService.createAccount(
                 request.username(), request.email(), request.password(), request.role(), quota, false);
         log.info("Admin {} created user '{}' ({}) with role {}", actingAdminId, user.getUsername(), user.getId(), user.getRole());

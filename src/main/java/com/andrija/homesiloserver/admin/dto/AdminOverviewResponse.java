@@ -19,7 +19,9 @@ public record AdminOverviewResponse(
         long files,
         long defaultQuotaBytes,
         boolean registrationEnabled,
-        List<StorageByUser> topUsers
+        List<StorageByUser> topUsers,
+        /* The running release, e.g. "1.2.0"; "dev" when run from source. */
+        String version
 ) {
     public record StorageByUser(UUID id, String username, long bytes) {}
 }

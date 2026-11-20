@@ -66,6 +66,17 @@ public class User {
     @Column
     private LocalDateTime passwordChangedAt;
 
+    /** Tokens issued before this instant are rejected too (set by "sign out of other devices"). */
+    @Column
+    private LocalDateTime sessionsRevokedAt;
+
+    /** Sessions started before this are no longer valid; null if none were ever ended. */
+    public LocalDateTime sessionsValidFrom() {
+        if (passwordChangedAt == null) return sessionsRevokedAt;
+        if (sessionsRevokedAt == null) return passwordChangedAt;
+        return passwordChangedAt.isAfter(sessionsRevokedAt) ? passwordChangedAt : sessionsRevokedAt;
+    }
+
     public boolean isAdmin() {
         return role == UserRole.ADMIN;
     }

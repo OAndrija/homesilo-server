@@ -1,0 +1,40 @@
+# Weekly pull requests for dependency updates; security fixes come as soon as
+# they're published. Minor and patch updates are grouped to keep the noise down.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    groups:
+      e2e:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  # Postgres, cloudflared and Caddy in the install files.
+  - package-ecosystem: docker-compose
+    directory: /deploy
+    schedule:
+      interval: weekly
+    ignore:
+      # HomeSilo's own images follow HOMESILO_VERSION, not Dependabot.
+      - dependency-name: "ghcr.io/oandrija/*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

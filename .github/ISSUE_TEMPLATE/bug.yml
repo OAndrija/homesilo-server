@@ -1,0 +1,50 @@
+name: Something isn't working
+description: A bug in the server, the web app or the install files.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: And what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to make it happen
+      placeholder: |
+        1. Upload a folder with ...
+        2. Open ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown under Users in the admin area, or the image tag you run.
+      placeholder: "1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: access
+    attributes:
+      label: How you reach HomeSilo
+      options:
+        - Directly on my network
+        - Tailscale
+        - Cloudflare Tunnel
+        - Caddy (compose.caddy.yml)
+        - Another reverse proxy
+        - Running from source
+  - type: input
+    id: machine
+    attributes:
+      label: Machine and browser
+      placeholder: "Raspberry Pi 5, Docker 27; Firefox on Android"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server log
+      description: The output of `docker compose logs server` around the time it happened. Check it for anything private first.
+      render: text

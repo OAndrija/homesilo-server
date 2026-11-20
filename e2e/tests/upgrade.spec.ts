@@ -196,6 +196,29 @@ test('upload, rename, folder zip download', async ({ page }) => {
   });
   await expect(row(page, 'after-upgrade.txt')).toBeVisible();
 
+  // A file over 32 MB goes in chunks, through nginx, and arrives whole.
+  const chunks: string[] = [];
+  page.on('request', (r) => {
+    if (r.method() === 'PUT' && r.url().includes('/api/v1/uploads/')) chunks.push(r.url());
+  });
+  const big = Buffer.alloc(40 * 1024 * 1024, 7);
+  big.write('start of the big file');
+  await page.setInputFiles('input[type=file]', {
+    name: 'big-video.mp4',
+    mimeType: 'video/mp4',
+    buffer: big,
+  });
+  await expect(row(page, 'big-video.mp4')).toBeVisible({ timeout: 60_000 });
+  expect(chunks).toHaveLength(2);
+  await row(page, 'big-video.mp4').hover();
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    row(page, 'big-video.mp4').getByRole('button', { name: 'Download', exact: true }).click(),
+  ]);
+  const downloaded = readFileSync((await download.path())!);
+  expect(downloaded.length).toBe(big.length);
+  expect(downloaded.equals(big)).toBe(true);
+
   await row(page, 'after-upgrade.txt').hover();
   await row(page, 'after-upgrade.txt').getByRole('button', { name: 'Rename file' }).click();
   const input = page.locator('#folderNameInput');
@@ -263,13 +286,42 @@ test('changing the password ends the old session and the new one works', async (
   await signIn(page, ALICE.username, NEW_PASSWORD);
 });
 
-test('a new user can register and only sees their own files', async ({ page }) => {
+test('an admin invites someone, who joins with the link and only sees their own files', async ({ page, browser }) => {
+  // Sign-up is invite-only by default.
   await page.goto('/register');
+  await expect(page.getByText('Sign-up is invite-only on this server')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Create account' })).toBeDisabled();
+
+  const admin = await browser.newPage();
+  await signIn(admin, ALICE.username, NEW_PASSWORD);
+  await accountMenu(admin, 'Manage users');
+  await admin.getByRole('button', { name: 'Invite someone' }).click();
+  await admin.fill('#invite-note', 'Carol');
+  await admin.getByRole('button', { name: 'Make invite link' }).click();
+  const link = await admin.locator('#invite-link').inputValue();
+  expect(link).toMatch(/\/invite#[A-Za-z0-9_-]{43}$/);
+  await admin.keyboard.press('Escape');
+  await expect(admin.getByRole('button', { name: 'Revoke invite: Carol' })).toBeVisible();
+
+  await page.goto(link);
+  await expect(page.getByText(`${ALICE.username} invited you`)).toBeVisible();
+  // The secret is cleared from the address bar once read.
+  expect(page.url()).toMatch(/\/invite$/);
   await page.fill('#username', 'new-carol');
   await page.fill('#email', 'carol@example.com');
   await page.fill('#password', 'carols-password');
   await page.click('button[type=submit]');
   await page.waitForURL(/\/home/);
+
+  // The link worked once.
+  const again = await browser.newPage();
+  await again.goto(link);
+  await expect(again.getByText('This invite link has expired or has already been used')).toBeVisible();
+  await again.close();
+  await admin.reload();
+  await admin.getByRole('button', { name: /Used and expired/ }).click();
+  await expect(admin.getByText('Joined as new-carol')).toBeVisible();
+  await admin.close();
 
   await page.click('a[href="/my-files"]');
   await expect(page.getByText('Your silo is empty')).toBeVisible();

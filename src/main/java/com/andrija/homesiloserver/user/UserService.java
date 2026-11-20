@@ -32,6 +32,12 @@ public class UserService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
+    /** The account, locked for the rest of the transaction (see {@link UserRepository#findByIdForUpdate}). */
+    public User lockForQuotaCheck(UUID id) {
+        return userRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
     public UserResponse findById(UUID id) {
         return UserResponse.from(getEntity(id));
     }

@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.trash;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.TargetType;
@@ -41,6 +42,7 @@ public class TrashService {
     private final FileMetadataRepository fileRepository;
     private final ApplicationEventPublisher events;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
     private final ActivityRecorder activity;
 
     /** Deletes a trashed folder and everything under it. */
@@ -82,7 +84,7 @@ public class TrashService {
     /** Purges items that have been in trash longer than the configured retention. */
     @Transactional
     public PurgeResult purgeExpired() {
-        int retentionDays = properties.trash().retentionDays();
+        int retentionDays = settings.trashRetentionDays();
         if (retentionDays <= 0) return new PurgeResult(0, 0);
         LocalDateTime cutoff = LocalDateTime.now().minusDays(retentionDays);
 

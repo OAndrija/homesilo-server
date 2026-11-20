@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.dashboard;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.dashboard.dto.DashboardStatsResponse;
 import com.andrija.homesiloserver.dashboard.dto.StorageBreakdownItem;
@@ -33,6 +34,7 @@ public class DashboardService {
     private final FolderRepository folderRepository;
     private final UserService userService;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
 
     public DashboardStatsResponse getStats(UUID ownerId) {
         User user = userService.getEntity(ownerId);
@@ -52,7 +54,7 @@ public class DashboardService {
                 fileRepository.countByOwnerIdAndTrashedFalseAndUploadedAtAfter(ownerId, LocalDateTime.now().minusDays(7)),
                 fileRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(ownerId)
                         + folderRepository.countByOwnerIdAndStarredTrueAndTrashedFalse(ownerId),
-                properties.trash().retentionDays(),
+                settings.trashRetentionDays(),
                 breakdown(ownerId, trashed),
                 recentlyTrashed
         );

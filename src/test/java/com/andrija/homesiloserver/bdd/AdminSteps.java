@@ -36,7 +36,7 @@ public class AdminSteps {
     @Given("I am signed in as {string}, an admin")
     public void iAmSignedInAsAnAdmin(String name) {
         world.signInAs(name);
-        // Promoting directly: only the server's very first account starts out as admin.
+        // Promoting directly keeps scenarios short; FirstRunIntegrationTest covers the real way.
         User me = users.findById(world.me().id()).orElseThrow();
         me.setRole(UserRole.ADMIN);
         users.save(me);

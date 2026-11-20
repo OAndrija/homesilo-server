@@ -18,7 +18,6 @@ env:
   # Last commit before the Flyway / cookie-auth rewrite: the "old version" users upgrade from.
   LEGACY_SHA: 0cae3dd585bd35d399d974f400ca6453337b5119
   DB_PASSWORD: e2e-db-password
-  JWT_SECRET: e2e-jwt-secret-that-is-comfortably-longer-than-32-bytes
   COMPOSE: docker compose -f docker-compose.yml -f e2e/docker-compose.e2e.yml
 
 jobs:
@@ -136,3 +135,108 @@ jobs:
         if: always()
         working-directory: homesilo-server
         run: $COMPOSE down -v
+
+  # A brand-new install from deploy/, the way the docs tell people to do it, with
+  # images built from these commits standing in for the published ones.
+  fresh-install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HOMESILO_VERSION: e2e
+      DB_PASSWORD: fresh-install-db-password
+      SETUP_CODE: FRESH-INSTALL-CODE-2026
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: homesilo-server
+
+      - name: Pick the matching client branch
+        id: client
+        run: |
+          branch="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          if git ls-remote --exit-code --heads https://github.com/OAndrija/homesilo-client "$branch" >/dev/null; then
+            echo "ref=$branch" >> "$GITHUB_OUTPUT"
+          else
+            echo "ref=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OAndrija/homesilo-client
+          ref: ${{ steps.client.outputs.ref }}
+          path: homesilo-client
+
+      - name: Build the images under their published names
+        run: |
+          docker build -t ghcr.io/oandrija/homesilo-server:e2e homesilo-server
+          docker build -t ghcr.io/oandrija/homesilo-client:e2e homesilo-client
+
+      - name: Start it as a new user would
+        working-directory: homesilo-server/deploy
+        run: |
+          cp .env.example .env
+          sed -i "s/^DB_PASSWORD=$/DB_PASSWORD=$DB_PASSWORD/" .env
+          docker compose up -d --wait
+
+      - name: The setup page is what a new server shows
+        run: |
+          curl -fsS http://localhost:8080/healthz
+          curl -fsS http://localhost:8080/api/v1/auth/config | tee config.json
+          grep -q '"setupRequired":true' config.json
+          grep -q '"registrationEnabled":false' config.json
+
+      - name: Setup creates the admin; sign-up stays closed
+        run: |
+          code=$(curl -s -o setup.json -w '%{http_code}' -c cookies.txt \
+            -H 'Content-Type: application/json' -H 'X-Forwarded-Proto: https' \
+            -d "{\"setupCode\":\"$SETUP_CODE\",\"username\":\"owner\",\"email\":\"owner@example.com\",\"password\":\"owner-password-1\"}" \
+            http://localhost:8080/api/v1/auth/setup -D headers.txt)
+          cat setup.json; echo
+          [ "$code" = 201 ]
+          grep -q '"role":"ADMIN"' setup.json
+          # Came "over HTTPS" through the proxy header, so the cookie needs HTTPS.
+          grep -i '^set-cookie: homesilo_session=' headers.txt | grep -qi 'secure'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H 'Content-Type: application/json' \
+            -d '{"username":"stranger","email":"s@example.com","password":"stranger-pass-1"}' \
+            http://localhost:8080/api/v1/auth/register)
+          [ "$code" = 403 ]
+
+      - name: A signing key was generated and kept private
+        working-directory: homesilo-server/deploy
+        run: |
+          docker compose exec -T server sh -c 'ls -l /data/storage/.secrets/jwt-secret && test "$(stat -c %a /data/storage/.secrets/jwt-secret)" = 600'
+
+      - name: A backup can be made, with the image's pg_dump against PostgreSQL 17
+        working-directory: homesilo-server/deploy
+        run: |
+          # The session cookie is marked Secure, so curl only sends it over https; send it by hand.
+          session=$(awk '$6 == "homesilo_session" { print $7 }' ../../cookies.txt)
+          # Signing in replaces the CSRF token, and the next request hands out the new one, as the app would see it.
+          xsrf=$(curl -fsS -o /dev/null -D - -H "Cookie: homesilo_session=$session" -H 'X-Forwarded-Proto: https' \
+            http://localhost:8080/api/v1/users/me | sed -n 's/^[Ss]et-[Cc]ookie: XSRF-TOKEN=\([^;]*\).*/\1/p' | tr -d '\r')
+          [ -n "$xsrf" ]
+          curl -fsS -X POST -H "Cookie: homesilo_session=$session; XSRF-TOKEN=$xsrf" -H "X-XSRF-TOKEN: $xsrf" \
+            http://localhost:8080/api/v1/admin/backups | tee backup.json
+          grep -q '"lastError":null' backup.json
+          docker compose exec -T server sh -c 'ls -l /data/backups && ls /data/backups/homesilo-*.dump'
+          # It's a real dump: pg_restore can read its table of contents.
+          docker compose exec -T server sh -c 'pg_restore --list /data/backups/homesilo-*.dump | grep -q "TABLE public users"'
+
+      - name: Sessions survive a restart
+        working-directory: homesilo-server/deploy
+        run: |
+          docker compose restart server
+          docker compose up -d --wait
+          # The cookie is marked Secure, so curl only sends it over https; send it by hand.
+          token=$(awk '$6 == "homesilo_session" { print $7 }' ../../cookies.txt)
+          curl -fsS -H "Cookie: homesilo_session=$token" http://localhost:8080/api/v1/users/me | grep -q '"username":"owner"'
+
+      - name: Logs
+        if: failure()
+        working-directory: homesilo-server/deploy
+        run: docker compose logs --no-color
+
+      - name: Tear down
+        if: always()
+        working-directory: homesilo-server/deploy
+        run: docker compose down -v

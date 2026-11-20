@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.auth;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.LoginRequest;
@@ -7,6 +8,8 @@ import com.andrija.homesiloserver.auth.dto.RegisterRequest;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.exception.ForbiddenException;
 import com.andrija.homesiloserver.common.exception.TooManyRequestsException;
+import com.andrija.homesiloserver.invite.Invite;
+import com.andrija.homesiloserver.invite.InviteService;
 import com.andrija.homesiloserver.security.ServerUserDetails;
 import com.andrija.homesiloserver.user.User;
 import com.andrija.homesiloserver.user.UserRepository;
@@ -19,6 +22,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,23 +39,36 @@ public class AuthService {
     private final LoginAttemptService loginAttempts;
     private final HomesiloProperties properties;
     private final ActivityRecorder activity;
+    private final InviteService invites;
+    private final PasswordEncoder passwordEncoder;
+    private final ServerSettings settings;
 
     /**
-     * Creates an account. The very first account becomes the administrator, so a
-     * fresh install can always be claimed even with registration disabled.
+     * Creates an account: open to anyone when registration is enabled, otherwise
+     * only with an admin's invite link. The first account (the admin) is made
+     * through {@link SetupService} instead, with the setup code.
      */
     @Transactional
     public User register(RegisterRequest request) {
-        boolean firstUser = userRepository.count() == 0;
-        if (!firstUser && !properties.auth().registrationEnabled()) {
-            throw new ForbiddenException("Registration is disabled on this server");
+        if (userRepository.count() == 0) {
+            throw new ForbiddenException("HomeSilo isn't set up yet. Create the admin account first.");
+        }
+        boolean hasInvite = request.inviteToken() != null && !request.inviteToken().isBlank();
+        if (!hasInvite && !settings.registrationOpen()) {
+            throw new ForbiddenException("Sign-up is invite-only on this server. Ask an admin for an invite link.");
         }
 
+        // Claimed in this transaction: if the account can't be made, the invite stays unused.
+        Invite invite = hasInvite ? invites.claim(request.inviteToken().trim()) : null;
         User user = userService.createAccount(request.username(), request.email(), request.password(),
-                firstUser ? UserRole.ADMIN : UserRole.USER, properties.storage().defaultQuota().toBytes(), true);
+                invite != null ? invite.getRole() : UserRole.USER,
+                settings.defaultQuotaBytes(), true);
+        if (invite != null) invites.recordUse(invite, user);
 
-        log.info("Registered user '{}' ({}) with role {}", user.getUsername(), user.getId(), user.getRole());
-        activity.recordAs(user, ActivityAction.SIGNED_UP);
+        String invitedBy = invite != null && invite.getCreatedBy() != null ? invite.getCreatedBy().getUsername() : null;
+        log.info("Registered user '{}' ({}) with role {}{}", user.getUsername(), user.getId(), user.getRole(),
+                invite != null ? " using invite " + invite.getId() : "");
+        activity.recordAs(user, ActivityAction.SIGNED_UP, invitedBy);
         return user;
     }
 
@@ -78,8 +95,18 @@ public class AuthService {
                     findAccount(request.username()), "wrong password");
             throw ex;
         } catch (DisabledException ex) {
-            activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(),
-                    findAccount(request.username()), "account disabled");
+            // Spring checks "disabled" before the password, which would tell anyone an
+            // account exists. Only someone with the right password learns it's disabled.
+            User account = findAccount(request.username());
+            if (account == null || !passwordEncoder.matches(request.password(), account.getPassword())) {
+                loginAttempts.recordFailure(request.username(), clientAddress);
+                log.warn("Failed sign-in for '{}' from {}", request.username(), clientAddress);
+                activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(), account,
+                        "wrong password");
+                throw new BadCredentialsException("Bad credentials");
+            }
+            activity.recordSignInProblem(ActivityAction.SIGN_IN_FAILED, request.username(), account,
+                    "account disabled");
             throw ex;
         }
     }
@@ -92,8 +119,7 @@ public class AuthService {
                 .orElse(null);
     }
 
-    @Transactional(readOnly = true)
     public boolean isRegistrationOpen() {
-        return properties.auth().registrationEnabled() || userRepository.count() == 0;
+        return settings.registrationOpen();
     }
 }

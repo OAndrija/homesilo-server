@@ -2,6 +2,7 @@ package com.andrija.homesiloserver.security;
 
 import com.andrija.homesiloserver.auth.AuthCookies;
 import com.andrija.homesiloserver.auth.JwtService;
+import com.andrija.homesiloserver.auth.RevokedSessionRepository;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.user.UserRepository;
 import jakarta.servlet.DispatcherType;
@@ -19,18 +20,20 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.factory.PasswordEncoderFactories;
+import org.springframework.security.crypto.argon2.Argon2PasswordEncoder;
 import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfException;
+import org.springframework.security.web.csrf.CsrfFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
@@ -38,13 +41,16 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String X_FRAME_OPTIONS = "X-Frame-Options";
+    private static final String ARGON2 = "argon2";
 
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http,
             JwtService jwtService,
             AuthCookies authCookies,
-            UserRepository userRepository
+            UserRepository userRepository,
+            RevokedSessionRepository revokedSessions,
+            HomesiloProperties properties
     ) throws Exception {
         CookieCsrfTokenRepository csrfTokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
         csrfTokenRepository.setCookiePath("/");
@@ -89,8 +95,10 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
+                // Before the CSRF check, so it also guards the sign-in forms that check skips.
+                .addFilterBefore(new CrossSiteRequestFilter(properties.cors().allowedOrigins()), CsrfFilter.class)
                 .addFilterBefore(
-                        new JwtAuthenticationFilter(jwtService, authCookies, userRepository),
+                        new JwtAuthenticationFilter(jwtService, authCookies, userRepository, revokedSessions),
                         UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -122,15 +130,20 @@ public class SecurityConfig {
     }
 
     /**
-     * Delegating encoder (new hashes are {@code {bcrypt}...}) so the algorithm can be
-     * upgraded later without a migration. Hashes stored before this change have no
-     * {@code {id}} prefix, so they fall back to plain bcrypt for matching.
+     * Argon2id for new passwords, with OWASP's recommended minimum cost
+     * (19 MiB, 2 passes, 1 lane). Older bcrypt hashes ({@code {bcrypt}…}, or
+     * unprefixed from before prefixes were used) still match, and are re-hashed
+     * with Argon2id the next time their owner signs in (see
+     * {@link ServerUserDetailsService#updatePassword}). Unlike bcrypt, Argon2
+     * has no 72-byte limit, so long passphrases are fine.
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        DelegatingPasswordEncoder encoder =
-                (DelegatingPasswordEncoder) PasswordEncoderFactories.createDelegatingPasswordEncoder();
-        encoder.setDefaultPasswordEncoderForMatches(new BCryptPasswordEncoder());
+        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+        DelegatingPasswordEncoder encoder = new DelegatingPasswordEncoder(ARGON2, Map.of(
+                ARGON2, new Argon2PasswordEncoder(16, 32, 1, 19 * 1024, 2),
+                "bcrypt", bcrypt));
+        encoder.setDefaultPasswordEncoderForMatches(bcrypt);
         return encoder;
     }
 
