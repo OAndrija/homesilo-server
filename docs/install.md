@@ -76,8 +76,9 @@ the trash and the activity log are kept.
 
 ## Where everything is
 
-Your files, the database and the thumbnails are in Docker volumes called
-`homesilo_files`, `homesilo_db` and `homesilo_thumbnails`. They survive
+Your files, the database, the database backups and the thumbnails are in
+Docker volumes called `homesilo_files`, `homesilo_db`, `homesilo_backups` and
+`homesilo_thumbnails`. They survive
 updates and `docker compose down`, but not `docker compose down -v`, which
 deletes them. Don't run that unless you mean it.
 

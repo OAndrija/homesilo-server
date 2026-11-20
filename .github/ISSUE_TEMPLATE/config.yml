@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: A security problem
+    url: https://github.com/OAndrija/homesilo-server/security/advisories/new
+    about: Please report these privately, not as an issue.
+  - name: Help with installing
+    url: https://github.com/OAndrija/homesilo-server/blob/main/docs/install.md
+    about: The install guide, remote access and backups are in docs/.

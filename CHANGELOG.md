@@ -23,6 +23,18 @@ The first public release.
 - Accounts: a setup code creates the first admin, then people join with invite
   links. Admins can add, disable and remove accounts, set storage quotas and
   read an activity log.
+- A Server page for admins: open or close sign-up, set the storage new
+  accounts get and how long the trash and activity log are kept.
+- Nightly database backups, kept for a week, with a "Back up now" button and a
+  guide to copying them off the machine and restoring them.
+
+### Installing
+
+- Images for amd64 and arm64 on GHCR. An install is a compose file and a `.env`
+  where the only required setting is the database password.
+- Overlays for Cloudflare Tunnel and Caddy, and guides for those and Tailscale.
+- The session signing key is generated on first start, and cookies need HTTPS
+  automatically when the site is reached over HTTPS.
 
 ### Security
 

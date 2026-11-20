@@ -1,158 +1,174 @@
-# HomeSilo — server
+# HomeSilo
 
-Self-hosted personal cloud storage: a REST API in Spring Boot 4 / Java 21 backed by
-PostgreSQL and a content-addressed blob store on local disk. The web UI lives in
-[homesilo-client](https://github.com/OAndrija/homesilo-client).
+HomeSilo is a file storage service you run on your own computer: the everyday
+parts of Google Drive, for you and the people you live with. Everyone gets their
+own space with a storage limit. You can upload from the browser, sort things into
+folders, preview photos, videos and PDFs, and get anything back from the trash for
+a month. Your files stay on your hardware, and nobody outside your network can
+reach them unless you set that up.
 
-## Features
+This repository holds the server and the install files, so start here. The web
+interface lives in [homesilo-client](https://github.com/OAndrija/homesilo-client).
+Both are published as Docker images for amd64 and arm64, so an old PC, a mini PC
+or a Raspberry Pi 4 or 5 will run them.
 
-- Files and nested folders: upload, download, preview, rename, move, star, search
-- Trash with cascading trash/restore, empty-trash, and automatic purge after N days
-- Zip downloads of any selection, folders included, streamed from disk
-- Per-user storage quotas (trash counts, as on Google Drive) and a usage dashboard
-- Content-addressed storage: identical bytes are stored once per user, however many
-  folders they appear in; blobs are garbage-collected after the last reference goes
-- Multi-user with roles; the first account becomes the administrator
-- HttpOnly-cookie sessions, CSRF protection, login throttling, session revocation on
-  password change
+## Install
 
-## Quick start (Docker)
+You need a machine with Docker and the Compose plugin. In an empty folder:
 
-Check out both repositories side by side:
-
-```
-homesilo/
-├── homesilo-server/   ← this repo
-└── homesilo-client/
-```
-
-```bash
-cd homesilo-server
-cp .env.example .env          # set DB_PASSWORD and JWT_SECRET (openssl rand -base64 48)
-docker compose up -d --build
-```
-
-Open http://localhost:8080. A new server asks for a **setup code** before it
-creates the admin account, so nobody who finds the server before you can claim
-it. The code is printed in the server log:
-
-```bash
+```sh
+curl -fsSLO https://raw.githubusercontent.com/OAndrija/homesilo-server/main/deploy/docker-compose.yml
+curl -fsSL -o .env https://raw.githubusercontent.com/OAndrija/homesilo-server/main/deploy/.env.example
+sed -i "s|^DB_PASSWORD=$|DB_PASSWORD=$(openssl rand -hex 24)|" .env
+docker compose up -d
 docker compose logs server | grep -A3 "setup code"
 ```
 
-It changes on every start until setup is done. To choose it yourself (for an
-automated install), set `SETUP_CODE` in `.env`.
+Open port 8080 on that machine in a browser, enter the setup code from the log
+and create your admin account. From there you invite people with one-time links.
+Sign-up is closed until you open it.
 
-After that, sign-up is closed. To add people, open **Users** and make an invite
-link: it works once, expires after the days you pick, and only a hash of it is
-stored. Admins can also add accounts directly, or open sign-up to everyone on
-the **Server** page.
+The [install guide](docs/install.md) goes through the same steps more slowly.
+After that:
 
-Data lives in two Docker volumes: `db-data` (PostgreSQL) and `storage` (file blobs).
-Back up both together.
+- [Reaching it from outside your home](docs/remote-access.md): Tailscale,
+  Cloudflare Tunnel, or Caddy with your own domain.
+- [Backups](docs/backups.md): what HomeSilo does by itself, and how to keep a
+  copy somewhere else. Read this before you put anything important in.
+- [Upgrading](docs/upgrading.md).
 
-## Local development
+## What it does
 
-Requirements: JDK 21 and a PostgreSQL database.
-
-```bash
-export DB_URL=jdbc:postgresql://localhost:5432/homesilo DB_USERNAME=homesilo DB_PASSWORD=...
-export JWT_SECRET=$(openssl rand -base64 48)
-./mvnw spring-boot:run
-```
-
-Run the client with `npm start` in `homesilo-client`; its dev server proxies `/api`
-to `localhost:8080`, so the browser sees a single origin.
-
-```bash
-./mvnw verify    # unit + integration tests against PostgreSQL 17 in Docker (Testcontainers)
-```
-
-Behaviour scenarios live in `src/test/resources/features` as plain-language Gherkin
-(accounts, files, trash, storage limit). Cucumber runs them in the same `verify`
-against the REST API and writes `target/cucumber-report.html`.
-
-The tests need a running Docker daemon; Testcontainers starts and removes the database
-itself. With Docker you can also run the server without installing PostgreSQL:
-`./mvnw spring-boot:test-run` starts it against a throwaway database container.
+- Folders, drag-and-drop uploads, moving, renaming, starring and search.
+- Large uploads go up in 32 MB pieces. If the connection drops, the upload picks
+  up where it stopped instead of starting over.
+- Previews for images, video, audio, PDFs and text. The grid shows thumbnails.
+- Downloads of a whole selection as one zip, folders included.
+- A trash that empties itself after 30 days (or never, if you prefer).
+- Storage limits per person. Identical files are stored once per person, however
+  many folders they're in.
+- An admin area for accounts, invite links, server settings and an activity log.
+- Nightly database backups with a restore guide.
 
 ## Configuration
 
-All settings are environment variables (mapped in `application.properties`).
+Most people only ever set `DB_PASSWORD`. The rest has sensible defaults and is
+described in [`deploy/.env.example`](deploy/.env.example). Sign-up, storage for
+new accounts and how long the trash and the activity log are kept can also be
+changed on the **Server** page, which then takes priority over these values.
 
-| Variable | Default | Purpose |
+| Variable | Default | What it does |
 |---|---|---|
-| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | `jdbc:postgresql://localhost:5432/homesilo`, `homesilo`, — | PostgreSQL connection |
-| `JWT_SECRET` | — (required) | Session signing key, at least 32 characters |
-| `JWT_EXPIRATION` | `7d` | Session lifetime (`12h`, `7d`, or milliseconds) |
-| `COOKIE_SECURE` | `false` | Set `true` when served over HTTPS |
-| `REGISTRATION_ENABLED` | `false` | Let anyone sign up; when off, people join with an admin's invite link |
-| `SETUP_CODE` | random, in the log | The code that creates the first admin on a new server (at least 12 letters or digits) |
-| `TRUSTED_PROXIES` | — | Only behind another proxy (Cloudflare Tunnel, Caddy): its address or CIDR, so sign-in limits see each visitor's real address |
-| `REAL_IP_HEADER` | `X-Forwarded-For` | The header that proxy puts the real address in (`CF-Connecting-IP` for Cloudflare) |
-| `STORAGE_BASE_PATH` | `./data/storage` | Where blobs are stored |
-| `THUMBNAIL_PATH` | `./data/thumbnails` | Cache of image previews for the grid view; safe to delete |
-| `DEFAULT_QUOTA` | `100GB` | Quota for new accounts |
-| `MAX_UPLOAD_SIZE` | `5GB` | Largest single upload |
-| `TRASH_RETENTION_DAYS` | `30` | Purge trash older than this; `0` keeps it forever |
-| `ACTIVITY_RETENTION_DAYS` | `90` | Delete activity log entries older than this; `0` keeps them forever |
-| `CORS_ALLOWED_ORIGINS` | — (CORS off) | Comma-separated origins, only if the UI is served from a different origin |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | `jdbc:postgresql://localhost:5432/homesilo`, `homesilo`, none | The PostgreSQL connection |
+| `JWT_SECRET` | generated | Key for signing sessions, 32 characters or more. Leave it unset and one is made on first start and kept in `<storage>/.secrets/` |
+| `JWT_EXPIRATION` | `7d` | How long a sign-in lasts (`12h`, `7d`, or milliseconds) |
+| `COOKIE_SECURE` | automatic | Whether the session cookie needs HTTPS. Unset, it follows the request (directly or via `X-Forwarded-Proto`) |
+| `SETUP_CODE` | random, in the log | The code that creates the first admin. Set your own (12 or more letters or digits) for an unattended install |
+| `REGISTRATION_ENABLED` | `false` | Let anyone create an account. When off, people join with an invite |
+| `DEFAULT_QUOTA` | `100GB` | Storage for each new account |
+| `MAX_UPLOAD_SIZE` | `5GB` | The largest single file. Set the same value on the client container |
+| `TRASH_RETENTION_DAYS` | `30` | Days before the trash empties itself; `0` keeps it |
+| `ACTIVITY_RETENTION_DAYS` | `90` | Days the activity log is kept; `0` keeps it forever |
+| `BACKUP_ENABLED` | `true` | Nightly database dumps |
+| `BACKUP_CRON` | `0 0 2 * * *` | When they run (seconds first, Spring style) |
+| `BACKUP_KEEP` | `7` | How many dumps to keep |
+| `BACKUP_PATH` | `./data/backups` | Where they go |
+| `STORAGE_BASE_PATH` | `./data/storage` | Where files are stored |
+| `THUMBNAIL_PATH` | `./data/thumbnails` | Thumbnail cache. Safe to delete; they're made again |
+| `CORS_ALLOWED_ORIGINS` | none | Only if the UI is served from a different origin than the API |
 
-## Architecture
+The client container has a few of its own (`API_UPSTREAM`, `MAX_UPLOAD_SIZE`,
+`TRUSTED_PROXIES`, `REAL_IP_HEADER`); see its README.
 
-Packages are organised by feature, each owning its entity, repository, service,
-controller and DTOs:
+## Building from source
 
-| Package | Responsibility |
+The `docker-compose.yml` in this folder builds both images from source. Check out
+the two repositories next to each other:
+
+```
+homesilo/
+├── homesilo-server/
+└── homesilo-client/
+```
+
+```sh
+cd homesilo-server
+cp .env.example .env     # set DB_PASSWORD
+docker compose up -d --build
+```
+
+To work on the server itself you need JDK 21 and Docker:
+
+```sh
+./mvnw spring-boot:test-run   # the server, with a throwaway PostgreSQL in Docker
+./mvnw verify                 # all tests
+```
+
+`spring-boot:run` works too if you have your own PostgreSQL; point `DB_URL`,
+`DB_USERNAME` and `DB_PASSWORD` at it. For the UI, run `npm start` in
+`homesilo-client`. Its dev server forwards `/api` to `localhost:8080`, so the
+browser sees one origin, the same as in production.
+
+`verify` runs unit tests, integration tests against PostgreSQL 17 (Testcontainers
+starts and removes it), and the Gherkin scenarios in `src/test/resources/features`,
+which describe accounts, files, the trash and storage limits in plain language.
+The Cucumber report ends up in `target/cucumber-report.html`.
+
+The `e2e` folder has the browser tests. CI runs them against the full Docker
+stack in two ways: upgrading a database made by an old version, and a fresh
+install from `deploy/` done the way the install guide describes.
+
+Releases are covered in [RELEASING.md](RELEASING.md) and the
+[changelog](CHANGELOG.md).
+
+## How it works
+
+The code is grouped by feature. Each package has its own entities, repository,
+service, controller and DTOs: `auth`, `user`, `invite`, `file`, `folder`,
+`upload`, `trash`, `storage`, `thumbnail`, `dashboard`, `activity`, `settings`,
+`backup`, `admin`, plus `security` for the filter chain and `common` for
+configuration, error handling and scheduled jobs.
+
+**Files on disk.** An upload is streamed to a temporary file and hashed on the
+way, then renamed to `<storage>/<ownerId>/<sha256>`. Nothing is held in memory,
+and a crash can't leave half a file under a real name. Database rows point at
+blobs by hash. Once the last row pointing at a blob is deleted, the blob is
+removed after the transaction commits, and a nightly sweep catches anything that
+slipped through.
+
+**Chunked uploads.** Files over 32 MB go through an upload session: each chunk
+is a separate request, written straight into place in a part file, and the
+session remembers which chunks it has. The client asks for that list to resume.
+Sessions left untouched for a day are cleared out overnight.
+
+**Sessions.** A JWT in an `HttpOnly; SameSite=Lax` cookie that page scripts
+can't read. Requests that change something need the `X-XSRF-TOKEN` header, and
+requests from other sites are refused by `Sec-Fetch-Site` or `Origin`. Every
+token has an id, so signing out, changing a password or "sign out everywhere"
+ends sessions on the spot. Passwords are hashed with Argon2id; old bcrypt hashes
+are upgraded the next time their owner signs in. Sign-in attempts are limited
+per address and per account.
+
+**Previews.** Media and PDFs are served inline. Anything that could run script
+(HTML, SVG, XML, JavaScript) is served as plain text, and every preview has a
+sandboxing Content-Security-Policy, so an uploaded file can't run code on
+HomeSilo's origin.
+
+**Errors.** Every error is `application/problem+json` with a `detail` a person
+can read, and per-field `errors` when validation fails.
+
+## API
+
+Everything is under `/api/v1`. Apart from `auth/*` and `/actuator/health`,
+every endpoint needs a session.
+
+| Area | Endpoints |
 |---|---|
-| `auth` | Register / login / logout, JWT issuing, session cookie, login throttling |
-| `security` | Filter chain, cookie/bearer authentication, CSRF, JSON 401/403 |
-| `user` | Accounts, password change, admin user management |
-| `file` | File entries, upload/download/preview, zip archives |
-| `folder` | Folder tree (adjacency list), breadcrumbs, cascading trash/restore |
-| `trash` | Permanent deletion, empty trash, retention purge |
-| `storage` | Blob store, after-commit blob garbage collection, orphan sweep |
-| `dashboard` | Usage statistics |
-| `common` | Typed configuration, error handling (RFC 9457), paging, scheduled jobs |
-
-**Storage.** An upload streams to a temp file while being hashed (SHA-256), then is
-atomically renamed to `<base>/<ownerId>/<sha256>`, so nothing is ever buffered in
-memory and a crash never leaves a half-written blob. File rows reference blobs by
-hash. When rows are deleted, a listener removes now-unreferenced blobs *after* the
-transaction commits; a nightly sweep catches anything missed.
-
-**Sessions.** The JWT lives in an `HttpOnly; SameSite=Lax` cookie the page can't
-read. State-changing requests need the `X-XSRF-TOKEN` header (Angular sends it
-automatically). Each request reloads the user by id, so disabling an account or
-changing a password takes effect immediately. Scripts can instead send
-`Authorization: Bearer <token>`.
-
-**Previews.** Media and PDFs are served inline; anything script-capable (HTML,
-SVG, XML, JS) is served as `text/plain`, and every preview carries a sandboxing
-`Content-Security-Policy`, so an uploaded file can never run code in HomeSilo's origin.
-
-**Errors.** Every error is `application/problem+json` with a human-readable `detail`
-(and per-field `errors` for validation failures).
-
-## API overview
-
-All endpoints are under `/api/v1`; everything except `auth/*` and `/actuator/health`
-requires a session.
-
-| | |
-|---|---|
-| `auth` | `GET config`, `POST register`, `POST login`, `POST logout` |
-| `users` | `GET me`, `PUT me/password`; admin: `GET /`, `GET {id}`, `PATCH {id}` |
-| `files` | `POST upload`, `GET` (list), `recent`, `starred`, `trash`, `search`, `starred/search`, `trash/search`, `GET {id}/metadata`, `{id}/download`, `{id}/preview`, `GET download-zip?fileIds=&folderIds=`, `PATCH {id}/rename`, `move`, `star`, `trash`, `restore`, `DELETE {id}` |
-| `folders` | `GET root`, `trash`, `search`, `{id}`, `{id}/contents`, `POST /`, `PATCH {id}/rename`, `move`, `trash`, `restore`, `DELETE {id}` |
-| `trash` | `DELETE /` (empty trash) |
-| `dashboard` | `GET stats` |
-
-## Upgrading an existing database
-
-The schema used to be managed by `ddl-auto=update`; it is now owned by Flyway
-(`src/main/resources/db/migration`) and Hibernate only validates it. On first start,
-an existing database is baselined at version 0 and the idempotent `V1` leaves your
-tables untouched; `V2` then drops the old one-blob-per-file unique constraint and adds
-`users.password_changed_at`. Existing files keep working because their storage layout
-(`<ownerId>/<sha256>`) is unchanged. Take a backup first all the same.
+| `auth` | `GET config`, `POST setup`, `POST register`, `POST login`, `POST logout`, `POST invites/preview` |
+| `users/me` | `GET`, `PUT password`, `POST sessions/sign-out-others`, `GET`/`PATCH preferences`, `GET activity` |
+| `files` | list, `recent`, `photos`, `starred`, `trash`, `search` (also under `starred/` and `trash/`), `POST upload`, `GET {id}/metadata`, `download`, `preview`, `thumbnail`, `GET download-zip?fileIds=&folderIds=`, `PATCH {id}/rename`, `move`, `star`, `trash`, `restore`, `DELETE {id}` |
+| `uploads` | `POST` (start), `GET {id}`, `PUT {id}/chunks/{n}`, `POST {id}/complete`, `DELETE {id}` |
+| `folders` | `GET root`, `trash`, `starred`, `search`, `{id}`, `{id}/summary`, `{id}/contents`, `POST`, `PATCH {id}/rename`, `move`, `star`, `trash`, `restore`, `DELETE {id}` |
+| `trash` | `DELETE` (empty it) |
+| `dashboard` | `GET stats`, `GET`/`PUT`/`DELETE layout` |
+| `admin` | `GET overview`, `users` (`GET`, `POST`, `PATCH`, `DELETE`, `PUT {id}/password`), `invites` (`GET`, `POST`, `DELETE`), `GET`/`PATCH settings`, `GET`/`POST backups`, `GET activity` |

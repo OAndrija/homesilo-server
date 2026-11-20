@@ -1,0 +1,16 @@
+name: An idea
+description: Something HomeSilo could do, or do better.
+labels: [idea]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What you're trying to do
+      description: The situation matters more than the solution. "My partner keeps filling up their storage with phone backups" is more useful than "add a quota warning".
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+      description: Optional.
