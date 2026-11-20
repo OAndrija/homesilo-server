@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.activity;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.dto.ActivityResponse;
 import com.andrija.homesiloserver.common.config.HomesiloProperties;
 import com.andrija.homesiloserver.common.web.PageResponse;
@@ -27,6 +28,7 @@ public class ActivityService {
 
     private final ActivityRepository repository;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
 
     /**
      * The whole server's log, newest first.
@@ -63,7 +65,7 @@ public class ActivityService {
     /** Deletes entries older than the retention period (0 keeps them forever). */
     @Transactional
     public int purgeExpired() {
-        int days = properties.activity().retentionDays();
+        int days = settings.activityRetentionDays();
         if (days <= 0) return 0;
         int removed = repository.deleteOlderThan(LocalDateTime.now().minusDays(days));
         if (removed > 0) log.info("Activity retention ({} days): removed {} entries", days, removed);

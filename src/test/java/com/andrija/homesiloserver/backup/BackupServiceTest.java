@@ -105,7 +105,7 @@ class BackupServiceTest {
     private BackupService service(Path command, int keep) {
         return new BackupService(
                 new BackupProperties(true, tmp.resolve("backups").toString(), keep, "0 0 2 * * *", command.toString()),
-                activity, "jdbc:postgresql://db:5433/silo", "homesilo", "secret-password");
+                activity, new BackupService.Database("jdbc:postgresql://db:5433/silo", "homesilo", "secret-password"));
     }
 
     private Path script(String body) throws Exception {

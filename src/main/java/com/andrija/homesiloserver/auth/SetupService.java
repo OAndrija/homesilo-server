@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.auth;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.SetupRequest;
@@ -48,6 +49,7 @@ public class SetupService {
     private final LoginAttemptService attempts;
     private final ActivityRecorder activity;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
     private final TransactionTemplate transactions;
     private final SecureRandom random = new SecureRandom();
 
@@ -55,13 +57,14 @@ public class SetupService {
     private final AtomicReference<String> code = new AtomicReference<>();
 
     public SetupService(UserRepository userRepository, UserService userService, LoginAttemptService attempts,
-                        ActivityRecorder activity, HomesiloProperties properties,
+                        ActivityRecorder activity, HomesiloProperties properties, ServerSettings settings,
                         PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.attempts = attempts;
         this.activity = activity;
         this.properties = properties;
+        this.settings = settings;
         this.transactions = new TransactionTemplate(transactionManager);
     }
 
@@ -93,7 +96,7 @@ public class SetupService {
             User admin = transactions.execute(status -> {
                 if (userRepository.count() > 0) throw new ConflictException("HomeSilo is already set up. Sign in instead.");
                 return userService.createAccount(request.username(), request.email(), request.password(),
-                        UserRole.ADMIN, properties.storage().defaultQuota().toBytes(), true);
+                        UserRole.ADMIN, settings.defaultQuotaBytes(), true);
             });
             attempts.recordSuccess(ATTEMPT_KEY, clientAddress);
             log.info("HomeSilo set up: '{}' is the admin", admin.getUsername());

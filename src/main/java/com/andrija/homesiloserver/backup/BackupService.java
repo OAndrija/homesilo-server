@@ -6,12 +6,16 @@ import com.andrija.homesiloserver.backup.dto.BackupResponse;
 import com.andrija.homesiloserver.common.exception.ApiException;
 import com.andrija.homesiloserver.common.exception.ConflictException;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.zaxxer.hikari.HikariDataSource;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
@@ -47,24 +51,31 @@ public class BackupService {
     private static final long TIMEOUT_MINUTES = 30;
 
     private final BackupProperties properties;
-    private final String databaseUrl;
-    private final String databaseUser;
-    private final String databasePassword;
+    /** Where the app's connections go, read when a backup runs; null in tests that pass it in. */
+    private final ObjectProvider<DataSource> dataSource;
+    private final Database fixedDatabase;
     private final ActivityRecorder activity;
     private final Path dir;
     private final AtomicBoolean running = new AtomicBoolean();
     private volatile Instant lastAttemptAt;
     private volatile String lastError;
 
-    public BackupService(BackupProperties properties, ActivityRecorder activity,
-                         @Value("${spring.datasource.url}") String databaseUrl,
-                         @Value("${spring.datasource.username:}") String databaseUser,
-                         @Value("${spring.datasource.password:}") String databasePassword) {
+    @Autowired
+    public BackupService(BackupProperties properties, ActivityRecorder activity, ObjectProvider<DataSource> dataSource) {
+        this(properties, activity, dataSource, null);
+    }
+
+    /** With the database given directly (tests). */
+    BackupService(BackupProperties properties, ActivityRecorder activity, Database database) {
+        this(properties, activity, null, database);
+    }
+
+    private BackupService(BackupProperties properties, ActivityRecorder activity,
+                          ObjectProvider<DataSource> dataSource, Database database) {
         this.properties = properties;
-        this.databaseUrl = databaseUrl;
-        this.databaseUser = databaseUser;
-        this.databasePassword = databasePassword;
         this.activity = activity;
+        this.dataSource = dataSource;
+        this.fixedDatabase = database;
         this.dir = Path.of(properties.path()).toAbsolutePath().normalize();
     }
 
@@ -124,15 +135,16 @@ public class BackupService {
     }
 
     private void dump(Path out) throws IOException {
-        Connection db = Connection.parse(databaseUrl);
+        Database database = database();
+        Connection db = Connection.parse(database.url());
         ProcessBuilder command = new ProcessBuilder(
                 properties.command(), "--format=custom", "--no-owner", "--no-privileges",
                 "--host", db.host(), "--port", String.valueOf(db.port()),
-                "--username", databaseUser, "--dbname", db.database(),
+                "--username", database.username(), "--dbname", db.database(),
                 "--file", out.toString())
                 .redirectErrorStream(true);
         // The password goes in the environment, never on the command line where `ps` would show it.
-        command.environment().put("PGPASSWORD", databasePassword);
+        command.environment().put("PGPASSWORD", database.password() == null ? "" : database.password());
         Process process;
         try {
             process = command.start();
@@ -156,6 +168,24 @@ public class BackupService {
             throw new BackupFailedException("The backup was interrupted");
         }
     }
+
+    /** The connection the app itself uses, however it was configured (environment, Testcontainers). */
+    private Database database() {
+        if (fixedDatabase != null) return fixedDatabase;
+        DataSource source = dataSource == null ? null : dataSource.getIfAvailable();
+        try {
+            if (source != null && source.isWrapperFor(HikariDataSource.class)) {
+                HikariDataSource hikari = source.unwrap(HikariDataSource.class);
+                return new Database(hikari.getJdbcUrl(), hikari.getUsername(), hikari.getPassword());
+            }
+        } catch (SQLException ex) {
+            // Fall through to the error below.
+        }
+        throw new BackupFailedException("Can't tell which database to back up");
+    }
+
+    /** What pg_dump needs to connect. */
+    record Database(String url, String username, String password) {}
 
     private void pruneOld() throws IOException {
         List<BackupResponse.Backup> all = list();

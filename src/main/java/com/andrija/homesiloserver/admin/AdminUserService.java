@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.admin;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.activity.TargetType;
@@ -64,6 +65,7 @@ public class AdminUserService {
     private final PasswordEncoder passwordEncoder;
     private final ApplicationEventPublisher events;
     private final HomesiloProperties properties;
+    private final ServerSettings settings;
     private final ActivityRecorder activity;
 
     public AdminOverviewResponse overview() {
@@ -75,8 +77,8 @@ public class AdminUserService {
                 fileRepository.sumAllSizes(),
                 userRepository.sumStorageQuotaBytes(),
                 fileRepository.countByTrashedFalse(),
-                properties.storage().defaultQuota().toBytes(),
-                properties.auth().registrationEnabled(),
+                settings.defaultQuotaBytes(),
+                settings.registrationOpen(),
                 fileRepository.topUsage(PageRequest.of(0, 5)).stream()
                         .map(u -> new AdminOverviewResponse.StorageByUser(u.getOwnerId(), u.getUsername(), u.getBytes()))
                         .toList(),
@@ -104,7 +106,7 @@ public class AdminUserService {
     public AdminUserResponse create(UUID actingAdminId, CreateUserRequest request) {
         long quota = request.storageQuotaBytes() != null
                 ? request.storageQuotaBytes()
-                : properties.storage().defaultQuota().toBytes();
+                : settings.defaultQuotaBytes();
         User user = userService.createAccount(
                 request.username(), request.email(), request.password(), request.role(), quota, false);
         log.info("Admin {} created user '{}' ({}) with role {}", actingAdminId, user.getUsername(), user.getId(), user.getRole());

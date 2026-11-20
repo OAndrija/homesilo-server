@@ -1,5 +1,6 @@
 package com.andrija.homesiloserver.auth;
 
+import com.andrija.homesiloserver.settings.ServerSettings;
 import com.andrija.homesiloserver.activity.ActivityAction;
 import com.andrija.homesiloserver.activity.ActivityRecorder;
 import com.andrija.homesiloserver.auth.dto.LoginRequest;
@@ -40,6 +41,7 @@ public class AuthService {
     private final ActivityRecorder activity;
     private final InviteService invites;
     private final PasswordEncoder passwordEncoder;
+    private final ServerSettings settings;
 
     /**
      * Creates an account: open to anyone when registration is enabled, otherwise
@@ -52,7 +54,7 @@ public class AuthService {
             throw new ForbiddenException("HomeSilo isn't set up yet. Create the admin account first.");
         }
         boolean hasInvite = request.inviteToken() != null && !request.inviteToken().isBlank();
-        if (!hasInvite && !properties.auth().registrationEnabled()) {
+        if (!hasInvite && !settings.registrationOpen()) {
             throw new ForbiddenException("Sign-up is invite-only on this server. Ask an admin for an invite link.");
         }
 
@@ -60,7 +62,7 @@ public class AuthService {
         Invite invite = hasInvite ? invites.claim(request.inviteToken().trim()) : null;
         User user = userService.createAccount(request.username(), request.email(), request.password(),
                 invite != null ? invite.getRole() : UserRole.USER,
-                properties.storage().defaultQuota().toBytes(), true);
+                settings.defaultQuotaBytes(), true);
         if (invite != null) invites.recordUse(invite, user);
 
         String invitedBy = invite != null && invite.getCreatedBy() != null ? invite.getCreatedBy().getUsername() : null;
@@ -118,6 +120,6 @@ public class AuthService {
     }
 
     public boolean isRegistrationOpen() {
-        return properties.auth().registrationEnabled();
+        return settings.registrationOpen();
     }
 }

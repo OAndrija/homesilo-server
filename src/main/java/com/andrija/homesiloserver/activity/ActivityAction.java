@@ -42,6 +42,8 @@ public enum ActivityAction {
     /** By HomeSilo itself (no actor): items past the trash retention. newValue: number of items. */
     TRASH_EXPIRED(ActivityCategory.FILES),
 
+    /** An admin changed a server setting. targetName: which; oldValue and newValue as stored. */
+    SETTING_CHANGED(ActivityCategory.ADMIN),
     /** The nightly database backup didn't work. newValue: why. */
     BACKUP_FAILED(ActivityCategory.ADMIN),
     /** An admin made a database backup by hand. newValue: the backup's file name. */
